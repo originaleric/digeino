@@ -29,7 +29,6 @@ type StatusConfig struct {
 type AppWebhookConfig struct {
 	Enabled *bool         `yaml:"Enabled" json:"Enabled,omitempty"`
 	URL     string        `yaml:"URL" json:"URL,omitempty"`
-	Events  []string      `yaml:"events" json:"events,omitempty"`
 	Config  WebhookConfig `yaml:",inline" json:"Config"`
 }
 
