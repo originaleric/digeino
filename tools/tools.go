@@ -1,0 +1,46 @@
+package tools
+
+import (
+	"context"
+
+	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino/components/tool/utils"
+	"github.com/cloudwego/eino/schema"
+)
+
+// safeTool 安全的工具包装器，用于处理错误
+type safeTool struct {
+	tool.InvokableTool
+}
+
+func (s safeTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
+	return s.InvokableTool.Info(ctx)
+}
+
+func (s safeTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
+	out, e := s.InvokableTool.InvokableRun(ctx, argumentsInJSON, opts...)
+	if e != nil {
+		return e.Error(), nil
+	}
+
+	return out, nil
+}
+
+// SafeInferTool 安全地创建工具
+func SafeInferTool[T, D any](toolName, toolDesc string, i utils.InvokeFunc[T, D]) (tool.InvokableTool, error) {
+	t, err := utils.InferTool(toolName, toolDesc, i)
+	if err != nil {
+		return nil, err
+	}
+
+	return safeTool{
+		InvokableTool: t,
+	}, nil
+}
+
+// BaseTools 获取 digeino 提供的通用基础工具集
+func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
+	var tools []tool.BaseTool
+	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
+	return tools, nil
+}
