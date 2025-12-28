@@ -1,0 +1,24 @@
+HttpServer:
+  Api:
+    Port: ":20201"
+
+Status:
+  Webhook:
+    Enabled: false
+    URL: ""
+    Events: ["complete", "error"]
+    method: "POST"
+    timeout: 5
+    retry_count: 3
+    retry_delay: 1000
+  Store:
+    Enabled: true
+    Type: "memory"
+    MySQL:
+      Host: "127.0.0.1"
+      Port: 3306
+      User: "root"
+      Password: ""
+      Database: "digpdf"
+      ExecTable: "df_execution"
+      StatusTable: "df_execution_status"
