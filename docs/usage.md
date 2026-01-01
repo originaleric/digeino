@@ -196,8 +196,85 @@ state.SetStringExtension(ExtensionKeyPdfPath, "/path/to/file.pdf")
 
 3. **JSON 序列化**：`Extensions` 字段会被自动序列化到 JSON，使用 `omitempty` 标签，空 map 不会出现在 JSON 中。
 
-## 5. 常见问题
+### 4.4 存储业务数据结构
+
+对于复杂的业务数据结构（如文档大纲、页面列表等），可以使用 `GetBusinessData` 和 `SetBusinessData` 方法：
+
+```go
+// 在您的项目中定义业务结构体
+type DocumentOutline struct {
+    Title          string        `json:"title"`
+    Topic          string        `json:"topic"`
+    TargetAudience string        `json:"target_audience"`
+    PageOutlines   []PageOutline `json:"pages"`
+}
+
+// 设置业务数据
+outline := &DocumentOutline{
+    Title: "我的文档",
+    Topic: "技术文档",
+}
+state.SetBusinessData("outline", outline)
+
+// 获取业务数据
+var outline *DocumentOutline
+err := state.GetBusinessData("outline", &outline)
+if err != nil {
+    // 处理错误
+}
+```
+
+**最佳实践**：在项目包中定义业务结构体和类型安全的辅助方法：
+
+```go
+// 在项目包中（如 DigPdf/eino/types.go）
+package eino_agent
+
+const ExtensionKeyOutline = "outline"
+
+func GetOutline(state *digeino.AgentState) (*DocumentOutline, error) {
+    var outline *DocumentOutline
+    err := state.GetBusinessData(ExtensionKeyOutline, &outline)
+    return outline, err
+}
+
+func SetOutline(state *digeino.AgentState, outline *DocumentOutline) {
+    state.SetBusinessData(ExtensionKeyOutline, outline)
+}
+```
+
+## 5. AgentState 架构说明
+
+### 5.1 核心字段
+
+`AgentState` 只包含通用的核心字段：
+- `SessionID`: 会话标识
+- `Query`: 用户查询
+- `Status`: 状态标识
+- `ResearchSummary`: 研究总结
+- `Extensions`: 扩展字段（用于存储项目特定的数据）
+
+### 5.2 业务结构体
+
+**重要**：`DigEino` 是一个通用库，不包含任何业务特定的结构体（如 `DocumentOutline`、`Page`、`DesignConfig` 等）。这些结构体应该在您的项目包中定义，并通过 `Extensions` 字段存储。
+
+这样做的好处：
+- ✅ 保持 `DigEino` 的通用性和可复用性
+- ✅ 不同项目可以定义自己的业务结构体
+- ✅ 避免业务逻辑污染核心库
+- ✅ 更好的类型安全和代码组织
+
+### 5.3 迁移指南
+
+如果您之前使用了 `AgentState` 中的业务字段（如 `Outline`、`Pages` 等），需要：
+
+1. 在项目包中定义这些业务结构体
+2. 使用 `GetBusinessData`/`SetBusinessData` 或自定义辅助方法访问
+3. 参考 `DigPdf` 项目的实现作为示例
+
+## 6. 常见问题
 
 - **独立性**: `DigEino` 现在不再依赖 `DigPdf` 的 internal 包，可以安全地在任何 Go 项目中 import。
 - **扩展性**: 如果需要增加新的配置项，请在 `github.com/originaleric/digeino/config` 包中扩展 `Config` 结构体。
 - **项目特定字段**: 使用 `AgentState.Extensions` 字段存储项目特定的数据，而不是修改核心库的 `AgentState` 结构体。
+- **业务结构体**: 所有业务特定的结构体都应该在项目包中定义，通过 `Extensions` 字段存储，并使用 `GetBusinessData`/`SetBusinessData` 方法访问。
