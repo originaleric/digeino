@@ -195,3 +195,17 @@ func (sc *StatusCollector) GetTotalUsage() *Usage {
 		TotalTokens:      sc.totalUsage.TotalTokens,
 	}
 }
+
+// GetExecutionID 获取执行ID
+func (sc *StatusCollector) GetExecutionID() string {
+	return sc.executionID
+}
+
+// GetStatusHistory 获取状态历史
+func (sc *StatusCollector) GetStatusHistory() []ExecutionStatus {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	history := make([]ExecutionStatus, len(sc.statusHistory))
+	copy(history, sc.statusHistory)
+	return history
+}

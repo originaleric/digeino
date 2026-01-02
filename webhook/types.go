@@ -62,7 +62,6 @@ type Message struct {
 
 // StatusStoreInterface 状态存储接口（为了解耦）
 type StatusStoreInterface interface {
-	CreateExecution(executionID, appName, requestID string) interface{}
 	AddStatus(executionID string, status ExecutionStatus) bool
 	SetResult(executionID string, result Message) bool
 }
