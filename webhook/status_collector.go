@@ -148,14 +148,19 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 	clients := sc.webhookClients
 	sc.mu.Unlock()
 
+	// 1. 优先执行回调（SSE 等），虽然它是同步调用，但在应用端可能已实现异步
 	if callback != nil {
 		callback(status)
 	}
 
+	// 2. 异步存储状态，避免数据库等慢操作阻塞主流程
 	if store != nil {
-		store.AddStatus(sc.executionID, status)
+		go func() {
+			store.AddStatus(sc.executionID, status)
+		}()
 	}
 
+	// 3. 异步发送 Webhook
 	if len(clients) > 0 {
 		go func() {
 			for _, client := range clients {

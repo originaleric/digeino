@@ -20,6 +20,15 @@ type WebhookClient struct {
 	client *http.Client
 }
 
+var (
+	// 共享 Transport 以复用连接池
+	defaultTransport = &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100, // 显著提高单主机并发连接数，特别适用于本地 Webhook
+		IdleConnTimeout:     90 * time.Second,
+	}
+)
+
 // NewWebhookClient 创建 Webhook 客户端
 func NewWebhookClient(config *config.WebhookConfig) *WebhookClient {
 	timeout := time.Duration(config.Timeout) * time.Second
@@ -30,7 +39,8 @@ func NewWebhookClient(config *config.WebhookConfig) *WebhookClient {
 	return &WebhookClient{
 		config: config,
 		client: &http.Client{
-			Timeout: timeout,
+			Timeout:   timeout,
+			Transport: defaultTransport,
 		},
 	}
 }
