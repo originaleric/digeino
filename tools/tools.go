@@ -6,6 +6,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
+	"github.com/originaleric/digeino/tools/ui_ux"
 )
 
 // safeTool 安全的工具包装器，用于处理错误
@@ -41,6 +42,13 @@ func SafeInferTool[T, D any](toolName, toolDesc string, i utils.InvokeFunc[T, D]
 // BaseTools 获取 digeino 提供的通用基础工具集
 func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	var tools []tool.BaseTool
+
+	// 1. UI/UX 设计智能工具
+	uiTool, err := ui_ux.NewUIUXSearchTool(ctx)
+	if err == nil {
+		tools = append(tools, uiTool)
+	}
+
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil
 }
