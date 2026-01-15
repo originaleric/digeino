@@ -22,3 +22,10 @@ Status:
       Database: "digpdf"
       ExecTable: "df_execution"
       StatusTable: "df_execution_status"
+
+WeChat:
+  Enabled: false                    # 是否启用微信推送功能
+  AppID: ""                         # 微信服务号 AppID
+  AppSecret: ""                     # 微信服务号 AppSecret
+  OpenIDs: []                       # 默认接收消息的用户 openid 列表
+  TokenFilePath: "storage/app/wechat/access_token.json"  # AccessToken 存储文件路径

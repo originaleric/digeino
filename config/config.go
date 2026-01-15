@@ -10,6 +10,7 @@ import (
 type Config struct {
 	HttpServer HttpServerConfig `yaml:"HttpServer" json:"HttpServer"`
 	Status     StatusConfig     `yaml:"Status" json:"Status"`
+	WeChat     WeChatConfig     `yaml:"WeChat" json:"WeChat"`
 }
 
 // HttpServerConfig HTTP 服务配置
@@ -62,6 +63,15 @@ type MySQLConfig struct {
 	StatusTable string `yaml:"StatusTable"`
 }
 
+// WeChatConfig 微信推送配置
+type WeChatConfig struct {
+	Enabled     *bool    `yaml:"Enabled" json:"Enabled,omitempty"`         // 是否启用微信推送功能
+	AppID       string   `yaml:"AppID" json:"AppID,omitempty"`             // 微信服务号 AppID
+	AppSecret   string   `yaml:"AppSecret" json:"AppSecret,omitempty"`     // 微信服务号 AppSecret
+	OpenIDs     []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`          // 默认接收消息的用户 openid 列表
+	TokenFilePath string `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"` // AccessToken 存储文件路径（相对于项目根目录）
+}
+
 var (
 	// DefaultConfig 全局默认配置
 	currentConfig *Config
@@ -99,6 +109,7 @@ func Set(cfg *Config) {
 // Default 返回默认配置
 func Default() *Config {
 	enabled := true
+	wechatDisabled := false
 	return &Config{
 		HttpServer: HttpServerConfig{
 			Api: struct {
@@ -121,6 +132,10 @@ func Default() *Config {
 				Enabled: &enabled,
 				Type:    "memory",
 			},
+		},
+		WeChat: WeChatConfig{
+			Enabled:       &wechatDisabled,
+			TokenFilePath: "storage/app/wechat/access_token.json",
 		},
 	}
 }

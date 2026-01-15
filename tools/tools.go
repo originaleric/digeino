@@ -7,6 +7,7 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
 	"github.com/originaleric/digeino/tools/ui_ux"
+	"github.com/originaleric/digeino/tools/wx"
 )
 
 // safeTool 安全的工具包装器，用于处理错误
@@ -47,6 +48,12 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	uiTool, err := ui_ux.NewUIUXSearchTool(ctx)
 	if err == nil {
 		tools = append(tools, uiTool)
+	}
+
+	// 2. 微信推送工具（如果已启用）
+	wxTool, err := wx.NewWeChatMessageTool(ctx)
+	if err == nil {
+		tools = append(tools, wxTool)
 	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
