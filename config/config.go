@@ -11,6 +11,8 @@ type Config struct {
 	HttpServer HttpServerConfig `yaml:"HttpServer" json:"HttpServer"`
 	Status     StatusConfig     `yaml:"Status" json:"Status"`
 	WeChat     WeChatConfig     `yaml:"WeChat" json:"WeChat"`
+	ChatModel  ChatModelConfig  `yaml:"ChatModel" json:"ChatModel"`
+	UIUX       UIUXConfig       `yaml:"UIUX" json:"UIUX"`
 }
 
 // HttpServerConfig HTTP 服务配置
@@ -70,6 +72,25 @@ type WeChatConfig struct {
 	AppSecret   string   `yaml:"AppSecret" json:"AppSecret,omitempty"`     // 微信服务号 AppSecret
 	OpenIDs     []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`          // 默认接收消息的用户 openid 列表
 	TokenFilePath string `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"` // AccessToken 存储文件路径（相对于项目根目录）
+}
+
+// ChatModelConfig ChatModel 配置（参考 DigFlow 的配置方式）
+type ChatModelConfig struct {
+	Type   string                 `yaml:"Type" json:"Type"`   // qwen, openai
+	Config map[string]interface{} `yaml:"Config" json:"Config"` // 模型配置（ApiKey, Model, BaseUrl 等）
+}
+
+// UIUXConfig UI/UX 工具配置
+type UIUXConfig struct {
+	Storage UIUXStorageConfig `yaml:"Storage" json:"Storage"`
+}
+
+// UIUXStorageConfig UI/UX 存储配置
+type UIUXStorageConfig struct {
+	BaseDir string `yaml:"BaseDir" json:"BaseDir"` // 存储基础目录，默认为 "storage/app/ui_ux"
+	// 如果不同应用/agent 需要隔离，可以在调用时传入 AppName
+	// 存储路径为: {BaseDir}/{app-name}/design-system/{project}/MASTER.md
+	// 如果未指定 app-name，则为: {BaseDir}/design-system/{project}/MASTER.md
 }
 
 var (
@@ -136,6 +157,19 @@ func Default() *Config {
 		WeChat: WeChatConfig{
 			Enabled:       &wechatDisabled,
 			TokenFilePath: "storage/app/wechat/access_token.json",
+		},
+		ChatModel: ChatModelConfig{
+			Type: "qwen",
+			Config: map[string]interface{}{
+				"ApiKey":  "",
+				"Model":   "qwen-max",
+				"BaseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			},
+		},
+		UIUX: UIUXConfig{
+			Storage: UIUXStorageConfig{
+				BaseDir: "storage/app/ui_ux",
+			},
 		},
 	}
 }

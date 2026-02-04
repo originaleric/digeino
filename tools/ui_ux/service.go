@@ -247,3 +247,12 @@ func (s *UIUXService) SearchStack(query string, stack string, maxResults int) (*
 		Results: finalResults,
 	}, nil
 }
+
+// GenerateDesignSystem 生成完整设计系统
+func (s *UIUXService) GenerateDesignSystem(query string, projectName string) (*DesignSystem, error) {
+	generator, err := NewDesignSystemGenerator()
+	if err != nil {
+		return nil, err
+	}
+	return generator.GenerateDesignSystem(query, projectName)
+}

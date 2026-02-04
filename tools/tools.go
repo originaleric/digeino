@@ -50,6 +50,18 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 		tools = append(tools, uiTool)
 	}
 
+	// 1.1. UI/UX 设计系统生成工具
+	designSystemTool, err := ui_ux.NewGenerateDesignSystemTool(ctx)
+	if err == nil {
+		tools = append(tools, designSystemTool)
+	}
+
+	// 1.2. UI/UX 设计系统持久化工具
+	persistTool, err := ui_ux.NewPersistDesignSystemTool(ctx)
+	if err == nil {
+		tools = append(tools, persistTool)
+	}
+
 	// 2. 微信推送工具（如果已启用）
 	wxTool, err := wx.NewWeChatMessageTool(ctx)
 	if err == nil {

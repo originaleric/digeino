@@ -29,3 +29,22 @@ WeChat:
   AppSecret: ""                     # 微信服务号 AppSecret
   OpenIDs: []                       # 默认接收消息的用户 openid 列表
   TokenFilePath: "storage/app/wechat/access_token.json"  # AccessToken 存储文件路径
+
+ChatModel:
+  Type: "qwen"                      # 模型类型: qwen, openai
+  Config:
+    ApiKey: ""                       # API Key（支持环境变量 ${API_KEY}）
+    Model: "qwen-max"                # 模型名称
+    BaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1"  # API 地址
+    # Temperature: 0.7               # 可选：温度参数
+    # MaxTokens: 2048                 # 可选：最大 token 数
+
+UIUX:
+  Storage:
+    BaseDir: "storage/app/ui_ux"     # 设计系统存储基础目录
+    # 存储结构：
+    # - 如果指定 AppName: {BaseDir}/{app-name}/design-system/{project}/MASTER.md
+    # - 如果未指定: {BaseDir}/design-system/{project}/MASTER.md
+    # 示例：
+    # - AppName="travel": storage/app/ui_ux/travel/design-system/my-project/MASTER.md
+    # - 未指定: storage/app/ui_ux/design-system/my-project/MASTER.md
