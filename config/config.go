@@ -67,11 +67,20 @@ type MySQLConfig struct {
 
 // WeChatConfig 微信推送配置
 type WeChatConfig struct {
-	Enabled     *bool    `yaml:"Enabled" json:"Enabled,omitempty"`         // 是否启用微信推送功能
-	AppID       string   `yaml:"AppID" json:"AppID,omitempty"`             // 微信服务号 AppID
-	AppSecret   string   `yaml:"AppSecret" json:"AppSecret,omitempty"`     // 微信服务号 AppSecret
-	OpenIDs     []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`          // 默认接收消息的用户 openid 列表
-	TokenFilePath string `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"` // AccessToken 存储文件路径（相对于项目根目录）
+	Enabled       *bool   `yaml:"Enabled" json:"Enabled,omitempty"`         // 是否启用微信推送功能
+	AppID         string   `yaml:"AppID" json:"AppID,omitempty"`             // 微信服务号 AppID
+	AppSecret     string   `yaml:"AppSecret" json:"AppSecret,omitempty"`     // 微信服务号 AppSecret
+	OpenIDs       []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`          // 默认接收消息的用户 openid 列表
+	TokenFilePath string   `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"` // AccessToken 存储文件路径（相对于项目根目录）
+	// 小程序相关配置（用于发送小程序卡片消息）
+	MiniProgram   MiniProgramConfig `yaml:"MiniProgram" json:"MiniProgram,omitempty"`
+}
+
+// MiniProgramConfig 小程序配置
+type MiniProgramConfig struct {
+	AppID        string `yaml:"AppID" json:"AppID,omitempty"`               // 小程序 AppID
+	DefaultPath  string `yaml:"DefaultPath" json:"DefaultPath,omitempty"`   // 默认页面路径，例如 "pages/index/index"
+	ThumbMediaID string `yaml:"ThumbMediaID" json:"ThumbMediaID,omitempty"` // 小程序卡片封面图片的 media_id
 }
 
 // ChatModelConfig ChatModel 配置（参考 DigFlow 的配置方式）

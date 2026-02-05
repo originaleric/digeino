@@ -29,6 +29,10 @@ WeChat:
   AppSecret: ""                     # 微信服务号 AppSecret
   OpenIDs: []                       # 默认接收消息的用户 openid 列表
   TokenFilePath: "storage/app/wechat/access_token.json"  # AccessToken 存储文件路径
+  MiniProgram:                      # 小程序配置（用于小程序卡片消息）
+    AppID: ""                       # 小程序 AppID
+    DefaultPath: "pages/index/index"  # 默认页面路径，例如 "pages/index/index"
+    ThumbMediaID: ""                # 小程序卡片封面图片的 media_id
 
 ChatModel:
   Type: "qwen"                      # 模型类型: qwen, openai
