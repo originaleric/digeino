@@ -34,6 +34,15 @@ WeChat:
     DefaultPath: "pages/index/index"  # 默认页面路径，例如 "pages/index/index"
     ThumbMediaID: ""                # 小程序卡片封面图片的 media_id
 
+WeCom:
+  Enabled: false                    # 是否启用企业微信推送功能
+  CorpID: ""                        # 企业微信 CorpID（我的企业 > 企业信息）
+  QYAPIHost: "https://qyapi.weixin.qq.com"  # 企业微信 API 地址（可选，支持自定义域名）
+  TokenFilePath: "storage/app/wecom/access_token.json"
+  Applications:
+    - AgentID: 0                    # 企业微信应用 ID（应用管理 > 自建应用）
+      AgentSecret: ""               # 应用 Secret
+
 ChatModel:
   Type: "qwen"                      # 模型类型: qwen, openai
   Config:

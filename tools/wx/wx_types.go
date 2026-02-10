@@ -94,3 +94,63 @@ type SendWeChatLinkMessageResponse struct {
 	FailedTo []FailedMessage `json:"failed_to"` // 发送失败的用户列表及原因
 	Message  string          `json:"message"`
 }
+
+// --- 企业微信相关类型 ---
+
+// SendWeComMessageRequest 发送企业微信文字消息的请求参数
+type SendWeComMessageRequest struct {
+	UserID   string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
+	Content  string `json:"content" jsonschema:"required,description=必填：要发送的文字内容，建议不超过2048字符"`
+	AgentID  int64  `json:"agent_id" jsonschema:"description=可选：应用 ID，不传则用配置中第一个应用"`
+}
+
+// SendWeComMessageResponse 发送企业微信消息的响应
+type SendWeComMessageResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComImageMessageRequest 发送企业微信图片消息的请求参数
+type SendWeComImageMessageRequest struct {
+	UserID  string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
+	MediaID string `json:"media_id" jsonschema:"required,description=必填：图片的 media_id，通过临时素材上传接口获得"`
+	AgentID int64  `json:"agent_id" jsonschema:"description=可选：应用 ID"`
+}
+
+// SendWeComImageMessageResponse 发送企业微信图片消息的响应
+type SendWeComImageMessageResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComTextCardRequest 发送企业微信文本卡片消息的请求参数
+type SendWeComTextCardRequest struct {
+	UserID      string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
+	Title       string `json:"title" jsonschema:"required,description=必填：卡片标题"`
+	Description string `json:"description" jsonschema:"required,description=必填：卡片描述"`
+	URL         string `json:"url" jsonschema:"required,description=必填：点击卡片的跳转链接"`
+	AgentID     int64  `json:"agent_id" jsonschema:"description=可选：应用 ID"`
+}
+
+// SendWeComTextCardResponse 发送企业微信文本卡片消息的响应
+type SendWeComTextCardResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// WeComTokenData 企业微信 AccessToken 存储结构（按 agentID 区分）
+type WeComTokenData struct {
+	AgentID     int64  `json:"agent_id"`
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int64  `json:"expires_in"`
+	CreatedAt   int64  `json:"created_at"`
+	ExpiresAt   int64  `json:"expires_at"`
+}
+
+// WeComTokenAPIResponse 企业微信获取 token 的 API 响应
+type WeComTokenAPIResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int64  `json:"expires_in"`
+	ErrCode     int    `json:"errcode"`
+	ErrMsg      string `json:"errmsg"`
+}

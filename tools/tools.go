@@ -68,6 +68,20 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 		tools = append(tools, wxTool)
 	}
 
+	// 3. 企业微信推送工具（如果已启用）
+	wecomTool, err := wx.NewWeComMessageTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomTool)
+	}
+	wecomImageTool, err := wx.NewWeComImageTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomImageTool)
+	}
+	wecomTextCardTool, err := wx.NewWeComTextCardTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomTextCardTool)
+	}
+
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil
 }

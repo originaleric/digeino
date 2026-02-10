@@ -11,6 +11,7 @@ type Config struct {
 	HttpServer HttpServerConfig `yaml:"HttpServer" json:"HttpServer"`
 	Status     StatusConfig     `yaml:"Status" json:"Status"`
 	WeChat     WeChatConfig     `yaml:"WeChat" json:"WeChat"`
+	WeCom      WeComConfig      `yaml:"WeCom" json:"WeCom"`
 	ChatModel  ChatModelConfig  `yaml:"ChatModel" json:"ChatModel"`
 	UIUX       UIUXConfig       `yaml:"UIUX" json:"UIUX"`
 }
@@ -81,6 +82,21 @@ type MiniProgramConfig struct {
 	AppID        string `yaml:"AppID" json:"AppID,omitempty"`               // 小程序 AppID
 	DefaultPath  string `yaml:"DefaultPath" json:"DefaultPath,omitempty"`   // 默认页面路径，例如 "pages/index/index"
 	ThumbMediaID string `yaml:"ThumbMediaID" json:"ThumbMediaID,omitempty"` // 小程序卡片封面图片的 media_id
+}
+
+// WeComConfig 企业微信配置
+type WeComConfig struct {
+	Enabled       *bool              `yaml:"Enabled" json:"Enabled,omitempty"`
+	CorpID        string             `yaml:"CorpID" json:"CorpID,omitempty"`
+	QYAPIHost     string             `yaml:"QYAPIHost" json:"QYAPIHost,omitempty"`
+	TokenFilePath string             `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"`
+	Applications  []WeComApplication `yaml:"Applications" json:"Applications,omitempty"`
+}
+
+// WeComApplication 企业微信应用配置
+type WeComApplication struct {
+	AgentID     int64  `yaml:"AgentID" json:"AgentID"`
+	AgentSecret string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
 }
 
 // ChatModelConfig ChatModel 配置（参考 DigFlow 的配置方式）
@@ -166,6 +182,11 @@ func Default() *Config {
 		WeChat: WeChatConfig{
 			Enabled:       &wechatDisabled,
 			TokenFilePath: "storage/app/wechat/access_token.json",
+		},
+		WeCom: WeComConfig{
+			Enabled:       &wechatDisabled,
+			QYAPIHost:     "https://qyapi.weixin.qq.com",
+			TokenFilePath: "storage/app/wecom/access_token.json",
 		},
 		ChatModel: ChatModelConfig{
 			Type: "qwen",
