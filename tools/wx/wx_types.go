@@ -2,8 +2,9 @@ package wx
 
 // SendWeChatTextMessageRequest 发送微信文字消息的请求参数
 type SendWeChatTextMessageRequest struct {
-	OpenID  string `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
-	Content string `json:"content" jsonschema:"required,description=必填：要发送的文字消息内容，建议不超过2048字符"`
+	OpenID      string `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
+	Content     string `json:"content" jsonschema:"required,description=必填：要发送的文字消息内容，建议不超过2048字符"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用，否则内部自动获取"`
 }
 
 // SendWeChatTextMessageResponse 发送微信文字消息的响应
@@ -44,8 +45,9 @@ type WeChatMessageResponse struct {
 
 // SendWeChatImageMessageRequest 发送微信图片消息的请求参数
 type SendWeChatImageMessageRequest struct {
-	OpenID  string `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
-	MediaID string `json:"media_id" jsonschema:"required,description=必填：图片的 media_id，通过素材上传接口获得"`
+	OpenID      string `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
+	MediaID     string `json:"media_id" jsonschema:"required,description=必填：图片的 media_id，通过素材上传接口获得"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用"`
 }
 
 // SendWeChatImageMessageResponse 发送微信图片消息的响应
@@ -58,11 +60,12 @@ type SendWeChatImageMessageResponse struct {
 
 // SendWeChatMiniProgramPageRequest 发送微信小程序卡片消息的请求参数
 type SendWeChatMiniProgramPageRequest struct {
-	OpenID      string `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
-	Title       string `json:"title" jsonschema:"required,description=必填：小程序卡片标题"`
-	AppID       string `json:"appid" jsonschema:"description=可选：小程序 AppID，如果不提供则使用配置中的值"`
-	PagePath    string `json:"pagepath" jsonschema:"description=可选：小程序页面路径，如果不提供则使用配置中的默认路径"`
+	OpenID       string `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
+	Title        string `json:"title" jsonschema:"required,description=必填：小程序卡片标题"`
+	AppID        string `json:"appid" jsonschema:"description=可选：小程序 AppID，如果不提供则使用配置中的值"`
+	PagePath     string `json:"pagepath" jsonschema:"description=可选：小程序页面路径，如果不提供则使用配置中的默认路径"`
 	ThumbMediaID string `json:"thumb_media_id" jsonschema:"description=可选：小程序卡片封面图片的 media_id，如果不提供则使用配置中的值"`
+	AccessToken  string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用"`
 }
 
 // SendWeChatMiniProgramPageResponse 发送微信小程序卡片消息的响应
@@ -75,8 +78,9 @@ type SendWeChatMiniProgramPageResponse struct {
 
 // SendWeChatLinkMessageRequest 发送微信图文链接消息的请求参数
 type SendWeChatLinkMessageRequest struct {
-	OpenID   string              `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
-	Articles []LinkMessageArticle `json:"articles" jsonschema:"required,description=必填：图文消息列表，限制在1条以内"`
+	OpenID      string              `json:"openid" jsonschema:"description=可选：指定单个接收者的 openid。如果不提供，将发送给配置中的所有用户"`
+	Articles    []LinkMessageArticle `json:"articles" jsonschema:"required,description=必填：图文消息列表，限制在1条以内"`
+	AccessToken string              `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用"`
 }
 
 // LinkMessageArticle 图文消息文章
@@ -99,9 +103,10 @@ type SendWeChatLinkMessageResponse struct {
 
 // SendWeComMessageRequest 发送企业微信文字消息的请求参数
 type SendWeComMessageRequest struct {
-	UserID   string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
-	Content  string `json:"content" jsonschema:"required,description=必填：要发送的文字内容，建议不超过2048字符"`
-	AgentID  int64  `json:"agent_id" jsonschema:"description=可选：应用 ID，不传则用配置中第一个应用"`
+	UserID      string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
+	Content     string `json:"content" jsonschema:"required,description=必填：要发送的文字内容，建议不超过2048字符"`
+	AgentID     int64  `json:"agent_id" jsonschema:"description=可选：应用 ID，不传则用配置中第一个应用"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用"`
 }
 
 // SendWeComMessageResponse 发送企业微信消息的响应
@@ -112,9 +117,10 @@ type SendWeComMessageResponse struct {
 
 // SendWeComImageMessageRequest 发送企业微信图片消息的请求参数
 type SendWeComImageMessageRequest struct {
-	UserID  string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
-	MediaID string `json:"media_id" jsonschema:"required,description=必填：图片的 media_id，通过临时素材上传接口获得"`
-	AgentID int64  `json:"agent_id" jsonschema:"description=可选：应用 ID"`
+	UserID      string `json:"user_id" jsonschema:"required,description=必填：企业成员 userID"`
+	MediaID     string `json:"media_id" jsonschema:"required,description=必填：图片的 media_id，通过临时素材上传接口获得"`
+	AgentID     int64  `json:"agent_id" jsonschema:"description=可选：应用 ID"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用"`
 }
 
 // SendWeComImageMessageResponse 发送企业微信图片消息的响应
@@ -130,6 +136,7 @@ type SendWeComTextCardRequest struct {
 	Description string `json:"description" jsonschema:"required,description=必填：卡片描述"`
 	URL         string `json:"url" jsonschema:"required,description=必填：点击卡片的跳转链接"`
 	AgentID     int64  `json:"agent_id" jsonschema:"description=可选：应用 ID"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，若提供则优先使用"`
 }
 
 // SendWeComTextCardResponse 发送企业微信文本卡片消息的响应
@@ -153,4 +160,10 @@ type WeComTokenAPIResponse struct {
 	ExpiresIn   int64  `json:"expires_in"`
 	ErrCode     int    `json:"errcode"`
 	ErrMsg      string `json:"errmsg"`
+}
+
+// WeComMessageAPIResponse 企业微信发送消息 API 响应
+type WeComMessageAPIResponse struct {
+	ErrCode int    `json:"errcode"`
+	ErrMsg  string `json:"errmsg"`
 }

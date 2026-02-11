@@ -34,10 +34,14 @@ func SendWeChatTextMessage(ctx context.Context, req SendWeChatTextMessageRequest
 		}
 	}
 
-	// 3. 获取 AccessToken
-	accessToken, err := GetAccessToken(ctx)
-	if err != nil {
-		return SendWeChatTextMessageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+	// 3. 获取 AccessToken（优先使用请求中传入的）
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = GetAccessToken(ctx)
+		if err != nil {
+			return SendWeChatTextMessageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+		}
 	}
 
 	// 4. 逐个发送消息
@@ -120,10 +124,14 @@ func SendWeChatImageMessage(ctx context.Context, req SendWeChatImageMessageReque
 		}
 	}
 
-	// 3. 获取 AccessToken
-	accessToken, err := GetAccessToken(ctx)
-	if err != nil {
-		return SendWeChatImageMessageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+	// 3. 获取 AccessToken（优先使用请求中传入的）
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = GetAccessToken(ctx)
+		if err != nil {
+			return SendWeChatImageMessageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+		}
 	}
 
 	// 4. 逐个发送消息
@@ -231,10 +239,14 @@ func SendWeChatMiniProgramPage(ctx context.Context, req SendWeChatMiniProgramPag
 		}
 	}
 
-	// 4. 获取 AccessToken
-	accessToken, err := GetAccessToken(ctx)
-	if err != nil {
-		return SendWeChatMiniProgramPageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+	// 4. 获取 AccessToken（优先使用请求中传入的）
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = GetAccessToken(ctx)
+		if err != nil {
+			return SendWeChatMiniProgramPageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+		}
 	}
 
 	// 5. 逐个发送消息
@@ -348,10 +360,14 @@ func SendWeChatLinkMessage(ctx context.Context, req SendWeChatLinkMessageRequest
 		}
 	}
 
-	// 3. 获取 AccessToken
-	accessToken, err := GetAccessToken(ctx)
-	if err != nil {
-		return SendWeChatLinkMessageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+	// 3. 获取 AccessToken（优先使用请求中传入的）
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = GetAccessToken(ctx)
+		if err != nil {
+			return SendWeChatLinkMessageResponse{}, fmt.Errorf("failed to get access token: %w", err)
+		}
 	}
 
 	// 4. 逐个发送消息
