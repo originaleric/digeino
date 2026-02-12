@@ -12,6 +12,7 @@ import (
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
+	"github.com/originaleric/digeino/config"
 )
 
 // FirecrawlRequest 深度爬取请求
@@ -27,10 +28,14 @@ type FirecrawlResponse struct {
 
 // FirecrawlScrape 调用 Firecrawl API 将网页转换为 Markdown
 func FirecrawlScrape(ctx context.Context, req *FirecrawlRequest) (*FirecrawlResponse, error) {
-	// apiKey := config.Get().Firecrawl.APIKey // 未来可从配置获取
-	apiKey := os.Getenv("FIRECRAWL_API_KEY")
+	cfg := config.Get()
+	apiKey := cfg.Tools.Firecrawl.ApiKey
 	if apiKey == "" {
-		return nil, fmt.Errorf("Firecrawl API Key 未配置，请设置 FIRECRAWL_API_KEY 环境变量")
+		apiKey = os.Getenv("FIRECRAWL_API_KEY")
+	}
+
+	if apiKey == "" {
+		return nil, fmt.Errorf("Firecrawl API Key 未配置，可通过 eino.yml 或 FIRECRAWL_API_KEY 环境变量设置")
 	}
 
 	apiUrl := "https://api.firecrawl.dev/v0/scrape"

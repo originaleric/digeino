@@ -104,6 +104,10 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, firecrawlTool)
 	}
+	webSearchTool, err := research.NewWebSearchTool(ctx)
+	if err == nil {
+		tools = append(tools, webSearchTool)
+	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil

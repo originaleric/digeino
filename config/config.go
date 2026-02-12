@@ -14,6 +14,7 @@ type Config struct {
 	WeCom      WeComConfig      `yaml:"WeCom" json:"WeCom"`
 	ChatModel  ChatModelConfig  `yaml:"ChatModel" json:"ChatModel"`
 	UIUX       UIUXConfig       `yaml:"UIUX" json:"UIUX"`
+	Tools      ToolsConfig      `yaml:"Tools" json:"Tools"`
 }
 
 // HttpServerConfig HTTP 服务配置
@@ -68,13 +69,13 @@ type MySQLConfig struct {
 
 // WeChatConfig 微信推送配置
 type WeChatConfig struct {
-	Enabled       *bool   `yaml:"Enabled" json:"Enabled,omitempty"`         // 是否启用微信推送功能
-	AppID         string   `yaml:"AppID" json:"AppID,omitempty"`             // 微信服务号 AppID
-	AppSecret     string   `yaml:"AppSecret" json:"AppSecret,omitempty"`     // 微信服务号 AppSecret
-	OpenIDs       []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`          // 默认接收消息的用户 openid 列表
+	Enabled       *bool    `yaml:"Enabled" json:"Enabled,omitempty"`             // 是否启用微信推送功能
+	AppID         string   `yaml:"AppID" json:"AppID,omitempty"`                 // 微信服务号 AppID
+	AppSecret     string   `yaml:"AppSecret" json:"AppSecret,omitempty"`         // 微信服务号 AppSecret
+	OpenIDs       []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`             // 默认接收消息的用户 openid 列表
 	TokenFilePath string   `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"` // AccessToken 存储文件路径（相对于项目根目录）
 	// 小程序相关配置（用于发送小程序卡片消息）
-	MiniProgram   MiniProgramConfig `yaml:"MiniProgram" json:"MiniProgram,omitempty"`
+	MiniProgram MiniProgramConfig `yaml:"MiniProgram" json:"MiniProgram,omitempty"`
 }
 
 // MiniProgramConfig 小程序配置
@@ -95,14 +96,14 @@ type WeComConfig struct {
 
 // WeComApplication 企业微信应用配置
 type WeComApplication struct {
-	AgentID              int64  `yaml:"AgentID" json:"AgentID"`
-	AgentSecret          string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
-	ManageAllKFSession   bool   `yaml:"ManageAllKFSession" json:"ManageAllKFSession,omitempty"` // 是否管理所有客服会话，用于发送客服消息给个人微信用户
+	AgentID            int64  `yaml:"AgentID" json:"AgentID"`
+	AgentSecret        string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
+	ManageAllKFSession bool   `yaml:"ManageAllKFSession" json:"ManageAllKFSession,omitempty"` // 是否管理所有客服会话，用于发送客服消息给个人微信用户
 }
 
 // ChatModelConfig ChatModel 配置（参考 DigFlow 的配置方式）
 type ChatModelConfig struct {
-	Type   string                 `yaml:"Type" json:"Type"`   // qwen, openai
+	Type   string                 `yaml:"Type" json:"Type"`     // qwen, openai
 	Config map[string]interface{} `yaml:"Config" json:"Config"` // 模型配置（ApiKey, Model, BaseUrl 等）
 }
 
@@ -117,6 +118,24 @@ type UIUXStorageConfig struct {
 	// 如果不同应用/agent 需要隔离，可以在调用时传入 AppName
 	// 存储路径为: {BaseDir}/{app-name}/design-system/{project}/MASTER.md
 	// 如果未指定 app-name，则为: {BaseDir}/design-system/{project}/MASTER.md
+}
+
+// ToolsConfig 工具配置集
+type ToolsConfig struct {
+	Firecrawl FirecrawlConfig `yaml:"Firecrawl" json:"Firecrawl"`
+	WebSearch WebSearchConfig `yaml:"WebSearch" json:"WebSearch"`
+}
+
+// FirecrawlConfig Firecrawl 深度爬取配置
+type FirecrawlConfig struct {
+	ApiKey string `yaml:"ApiKey" json:"ApiKey"`
+}
+
+// WebSearchConfig 网页搜索配置
+type WebSearchConfig struct {
+	Engine  string `yaml:"Engine" json:"Engine"`   // google, bing, serpapi, duckduckgo, bocha
+	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`   // API 密钥
+	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"` // (可选) API 基础地址
 }
 
 var (
@@ -200,6 +219,14 @@ func Default() *Config {
 		UIUX: UIUXConfig{
 			Storage: UIUXStorageConfig{
 				BaseDir: "storage/app/ui_ux",
+			},
+		},
+		Tools: ToolsConfig{
+			Firecrawl: FirecrawlConfig{
+				ApiKey: "",
+			},
+			WebSearch: WebSearchConfig{
+				Engine: "duckduckgo",
 			},
 		},
 	}
