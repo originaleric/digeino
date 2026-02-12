@@ -108,6 +108,14 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, webSearchTool)
 	}
+	semanticSearchTool, err := research.NewSemanticSearchTool(ctx)
+	if err == nil {
+		tools = append(tools, semanticSearchTool)
+	}
+	codeIndexTool, err := research.NewCodeIndexTool(ctx)
+	if err == nil {
+		tools = append(tools, codeIndexTool)
+	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil

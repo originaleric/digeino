@@ -125,6 +125,8 @@ type ToolsConfig struct {
 	Firecrawl    FirecrawlConfig    `yaml:"Firecrawl" json:"Firecrawl"`
 	WebSearch    WebSearchConfig    `yaml:"WebSearch" json:"WebSearch"`
 	Unstructured UnstructuredConfig `yaml:"Unstructured" json:"Unstructured"`
+	Pinecone     PineconeConfig     `yaml:"Pinecone" json:"Pinecone"`
+	Embedding    EmbeddingConfig    `yaml:"Embedding" json:"Embedding"`
 }
 
 // FirecrawlConfig Firecrawl 深度爬取配置
@@ -143,6 +145,23 @@ type WebSearchConfig struct {
 type UnstructuredConfig struct {
 	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`
 	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"` // 默认为 https://api.unstructured.io/general/v0/general
+}
+
+// PineconeConfig Pinecone 向量数据库配置
+type PineconeConfig struct {
+	ApiKey    string `yaml:"ApiKey" json:"ApiKey"`
+	Host      string `yaml:"Host" json:"Host"`
+	Namespace string `yaml:"Namespace" json:"Namespace"`
+	IndexName string `yaml:"IndexName" json:"IndexName"`
+}
+
+// EmbeddingConfig 向量化模型配置
+type EmbeddingConfig struct {
+	Type       string `yaml:"Type" json:"Type"` // openai, qwen
+	ApiKey     string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl    string `yaml:"BaseUrl" json:"BaseUrl"`
+	Model      string `yaml:"Model" json:"Model"`
+	Dimensions int    `yaml:"Dimensions" json:"Dimensions"`
 }
 
 var (
@@ -238,6 +257,16 @@ func Default() *Config {
 			Unstructured: UnstructuredConfig{
 				ApiKey:  "",
 				BaseUrl: "https://api.unstructured.io/general/v0/general",
+			},
+			Pinecone: PineconeConfig{
+				ApiKey:    "",
+				Namespace: "default",
+			},
+			Embedding: EmbeddingConfig{
+				Type:       "qwen",
+				Model:      "text-embedding-v2",
+				Dimensions: 1024,
+				BaseUrl:    "https://dashscope.aliyuncs.com/compatible-mode/v1",
 			},
 		},
 	}
