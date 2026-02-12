@@ -1,14 +1,20 @@
 package research
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
+	"github.com/originaleric/digeino/config"
 )
 
 // --- Grep Search Tool ---
@@ -97,10 +103,75 @@ type DocToMarkdownResponse struct {
 }
 
 func DocToMarkdown(ctx context.Context, req *DocToMarkdownRequest) (*DocToMarkdownResponse, error) {
-	// 实际应用中会接入 github.com/ledongthuc/pdf 或类似库
-	// 暂时返回 Mock 消息说明功能意图
+	cfg := config.Get()
+	toolCfg := cfg.Tools.Unstructured
+
+	apiKey := toolCfg.ApiKey
+	if apiKey == "" {
+		apiKey = os.Getenv("UNSTRUCTURED_API_KEY")
+	}
+
+	if apiKey == "" {
+		return nil, fmt.Errorf("Unstructured API Key 未配置")
+	}
+
+	baseUrl := toolCfg.BaseUrl
+	if baseUrl == "" {
+		baseUrl = "https://api.unstructured.io/general/v0/general"
+	}
+
+	// 1. 打开文件
+	file, err := os.Open(req.Path)
+	if err != nil {
+		return nil, fmt.Errorf("无法打开文档: %w", err)
+	}
+	defer file.Close()
+
+	// 2. 准备 multipart 请求
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("files", filepath.Base(req.Path))
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		return nil, err
+	}
+
+	// 添加额外参数：策略设置为 'fast' 或 'hi_res'，输出格式为 'text/markdown'
+	_ = writer.WriteField("output_format", "text/markdown")
+	_ = writer.WriteField("strategy", "fast")
+	writer.Close()
+
+	// 3. 执行请求
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseUrl, body)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("unstructured-api-key", apiKey)
+
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Unstructured API 错误: %d, %s", resp.StatusCode, string(respBody))
+	}
+
+	// 4. 解析结果
+	markdown, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DocToMarkdownResponse{
-		Markdown: fmt.Sprintf("# 文档预览: %s\n\n[此处将来会是转换后的 Markdown 内容]", req.Path),
+		Markdown: string(markdown),
 	}, nil
 }
 

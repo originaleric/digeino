@@ -122,8 +122,9 @@ type UIUXStorageConfig struct {
 
 // ToolsConfig 工具配置集
 type ToolsConfig struct {
-	Firecrawl FirecrawlConfig `yaml:"Firecrawl" json:"Firecrawl"`
-	WebSearch WebSearchConfig `yaml:"WebSearch" json:"WebSearch"`
+	Firecrawl    FirecrawlConfig    `yaml:"Firecrawl" json:"Firecrawl"`
+	WebSearch    WebSearchConfig    `yaml:"WebSearch" json:"WebSearch"`
+	Unstructured UnstructuredConfig `yaml:"Unstructured" json:"Unstructured"`
 }
 
 // FirecrawlConfig Firecrawl 深度爬取配置
@@ -136,6 +137,12 @@ type WebSearchConfig struct {
 	Engine  string `yaml:"Engine" json:"Engine"`   // google, bing, serpapi, duckduckgo, bocha
 	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`   // API 密钥
 	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"` // (可选) API 基础地址
+}
+
+// UnstructuredConfig Unstructured.io 文档解析配置
+type UnstructuredConfig struct {
+	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"` // 默认为 https://api.unstructured.io/general/v0/general
 }
 
 var (
@@ -227,6 +234,10 @@ func Default() *Config {
 			},
 			WebSearch: WebSearchConfig{
 				Engine: "duckduckgo",
+			},
+			Unstructured: UnstructuredConfig{
+				ApiKey:  "",
+				BaseUrl: "https://api.unstructured.io/general/v0/general",
 			},
 		},
 	}
