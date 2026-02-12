@@ -6,6 +6,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
+	"github.com/originaleric/digeino/tools/research"
 	"github.com/originaleric/digeino/tools/ui_ux"
 	"github.com/originaleric/digeino/tools/wx"
 )
@@ -84,6 +85,24 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	wecomCustomerTool, err := wx.NewWeComCustomerMessageTool(ctx)
 	if err == nil {
 		tools = append(tools, wecomCustomerTool)
+	}
+
+	// 4. 通用调研系列工具
+	grepTool, err := research.NewGrepSearchTool(ctx)
+	if err == nil {
+		tools = append(tools, grepTool)
+	}
+	readTool, err := research.NewReadFileTool(ctx)
+	if err == nil {
+		tools = append(tools, readTool)
+	}
+	docTool, err := research.NewDocToMarkdownTool(ctx)
+	if err == nil {
+		tools = append(tools, docTool)
+	}
+	firecrawlTool, err := research.NewFirecrawlTool(ctx)
+	if err == nil {
+		tools = append(tools, firecrawlTool)
 	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
