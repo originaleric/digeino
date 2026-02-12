@@ -77,3 +77,26 @@ func NewWeComTextCardTool(ctx context.Context) (tool.BaseTool, error) {
 		},
 	)
 }
+
+// NewWeComCustomerMessageTool 创建企业微信客服消息发送工具（发给个人微信用户）
+func NewWeComCustomerMessageTool(ctx context.Context) (tool.BaseTool, error) {
+	cfg := config.Get()
+	if cfg.WeCom.Enabled == nil || !*cfg.WeCom.Enabled {
+		return nil, fmt.Errorf("WeCom tool is not enabled in config")
+	}
+	if cfg.WeCom.CorpID == "" || len(cfg.WeCom.Applications) == 0 {
+		return nil, fmt.Errorf("WeCom CorpID or Applications not configured")
+	}
+
+	return utils.InferTool(
+		"send_wecom_customer_message",
+		"通过企业微信客服消息发送文字给个人微信用户。需使用 open_kf_id（客服账号ID）和 customer_id（外部联系人ID）。用户需先通过扫码/链接添加企业为客服后才能收到消息。支持超过 850 字时自动分条发送。",
+		func(ctx context.Context, req *SendWeComCustomerMessageRequest) (*SendWeComCustomerMessageResponse, error) {
+			resp, err := SendWeComCustomerMessage(ctx, *req)
+			if err != nil {
+				return nil, err
+			}
+			return &resp, nil
+		},
+	)
+}

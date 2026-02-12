@@ -76,6 +76,77 @@ func sendWeComMessageAPI(ctx context.Context, accessToken string, agentID int64,
 	return nil
 }
 
+// sendWeComCustomerMessageAPI 直接调用企业微信客服 API 发送消息（用于第三方传入 token）
+func sendWeComCustomerMessageAPI(ctx context.Context, accessToken string, openKfID string, customerID string, body map[string]interface{}) error {
+	url := fmt.Sprintf("%s/cgi-bin/kf/send_msg?access_token=%s", getWeComAPIHost(), accessToken)
+	body["touser"] = customerID
+	body["open_kfid"] = openKfID
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("call WeCom API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read response: %w", err)
+	}
+
+	var apiResp WeComMessageAPIResponse
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return fmt.Errorf("parse response: %w", err)
+	}
+	if apiResp.ErrCode != 0 {
+		return fmt.Errorf("WeCom API errcode=%d errmsg=%s", apiResp.ErrCode, apiResp.ErrMsg)
+	}
+	return nil
+}
+
+// getWeComCustomerApp 获取具备「管理所有客服会话」权限的企业微信应用（用于发送客服消息给个人微信）
+func getWeComCustomerApp() (*workwx.WorkwxApp, error) {
+	cfg := config.Get()
+	if cfg.WeCom.CorpID == "" {
+		return nil, fmt.Errorf("WeCom CorpID not configured")
+	}
+	if len(cfg.WeCom.Applications) == 0 {
+		return nil, fmt.Errorf("WeCom Applications not configured")
+	}
+
+	var corpSecret string
+	var targetAgentID int64
+	for _, app := range cfg.WeCom.Applications {
+		if app.ManageAllKFSession {
+			corpSecret = app.AgentSecret
+			targetAgentID = app.AgentID
+			break
+		}
+	}
+	if corpSecret == "" {
+		return nil, fmt.Errorf("no WeCom application with ManageAllKFSession=true found in config")
+	}
+
+	var wx *workwx.Workwx
+	if cfg.WeCom.QYAPIHost != "" {
+		wx = workwx.New(cfg.WeCom.CorpID, workwx.WithQYAPIHost(cfg.WeCom.QYAPIHost))
+	} else {
+		wx = workwx.New(cfg.WeCom.CorpID)
+	}
+	return wx.WithApp(corpSecret, targetAgentID), nil
+}
+
 // getWeComApp 获取企业微信应用客户端
 func getWeComApp(agentID int64) (*workwx.WorkwxApp, error) {
 	cfg := config.Get()
@@ -275,4 +346,68 @@ func SendWeComTextCard(ctx context.Context, req SendWeComTextCardRequest) (SendW
 		return SendWeComTextCardResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
 	}
 	return SendWeComTextCardResponse{Success: true, Message: "文本卡片消息发送成功"}, nil
+}
+
+// SendWeComCustomerMessage 发送企业微信客服消息（发给个人微信用户）
+// 使用企业微信「客户联系」的客服能力，用户需先通过扫码/链接添加企业为客服后才可收到消息
+func SendWeComCustomerMessage(ctx context.Context, req SendWeComCustomerMessageRequest) (SendWeComCustomerMessageResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerMessageResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerMessageResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.Content == "" {
+		return SendWeComCustomerMessageResponse{}, fmt.Errorf("content is required")
+	}
+
+	// 第三方传入 token 时直接调客服 API
+	if req.AccessToken != "" {
+		if utf8.RuneCountInString(req.Content) > maxTextLength {
+			parts := splitMsg(req.Content, maxTextLength)
+			for _, part := range parts {
+				body := map[string]interface{}{
+					"msgtype": "text",
+					"text":    map[string]string{"content": part},
+				}
+				if err := sendWeComCustomerMessageAPI(ctx, req.AccessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+					return SendWeComCustomerMessageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+				}
+			}
+			return SendWeComCustomerMessageResponse{Success: true, Message: fmt.Sprintf("成功发送 %d 条消息", len(parts))}, nil
+		}
+		body := map[string]interface{}{
+			"msgtype": "text",
+			"text":    map[string]string{"content": req.Content},
+		}
+		if err := sendWeComCustomerMessageAPI(ctx, req.AccessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+			return SendWeComCustomerMessageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+		}
+		return SendWeComCustomerMessageResponse{Success: true, Message: "客服消息发送成功"}, nil
+	}
+
+	// 内部 token：使用 go-workwx，需配置 ManageAllKFSession
+	app, err := getWeComCustomerApp()
+	if err != nil {
+		return SendWeComCustomerMessageResponse{}, err
+	}
+	recipient := &workwx.Recipient{
+		UserIDs:  []string{req.CustomerID},
+		OpenKfID: req.OpenKfID,
+	}
+
+	if utf8.RuneCountInString(req.Content) > maxTextLength {
+		parts := splitMsg(req.Content, maxTextLength)
+		for _, part := range parts {
+			if err := app.SendTextMessage(recipient, part, false); err != nil {
+				return SendWeComCustomerMessageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+			}
+		}
+		return SendWeComCustomerMessageResponse{Success: true, Message: fmt.Sprintf("成功发送 %d 条消息", len(parts))}, nil
+	}
+
+	if err := app.SendTextMessage(recipient, req.Content, false); err != nil {
+		return SendWeComCustomerMessageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerMessageResponse{Success: true, Message: "客服消息发送成功"}, nil
 }

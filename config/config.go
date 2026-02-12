@@ -95,8 +95,9 @@ type WeComConfig struct {
 
 // WeComApplication 企业微信应用配置
 type WeComApplication struct {
-	AgentID     int64  `yaml:"AgentID" json:"AgentID"`
-	AgentSecret string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
+	AgentID              int64  `yaml:"AgentID" json:"AgentID"`
+	AgentSecret          string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
+	ManageAllKFSession   bool   `yaml:"ManageAllKFSession" json:"ManageAllKFSession,omitempty"` // 是否管理所有客服会话，用于发送客服消息给个人微信用户
 }
 
 // ChatModelConfig ChatModel 配置（参考 DigFlow 的配置方式）

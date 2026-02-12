@@ -81,6 +81,10 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, wecomTextCardTool)
 	}
+	wecomCustomerTool, err := wx.NewWeComCustomerMessageTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerTool)
+	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil

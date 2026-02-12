@@ -1,4 +1,4 @@
-HttpServer:
+goHttpServer:
   Api:
     Port: ":20201"
 
@@ -42,6 +42,7 @@ WeCom:
   Applications:
     - AgentID: 0                    # 企业微信应用 ID（应用管理 > 自建应用）
       AgentSecret: ""               # 应用 Secret
+      ManageAllKFSession: false     # 是否管理所有客服会话（用于 send_wecom_customer_message 发给个人微信）
 
 ChatModel:
   Type: "qwen"                      # 模型类型: qwen, openai

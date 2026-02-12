@@ -24,6 +24,13 @@
 - 发送标题 + 描述 + 链接的卡片，适合通知类场景
 - 用户点击可跳转指定 URL
 
+### 4. 客服消息 (`send_wecom_customer_message`) — 发给个人微信用户
+- 使用企业微信「客户联系」的客服能力，将消息发给**个人微信**用户
+- 需提供 `open_kf_id`（客服账号 ID）和 `customer_id`（外部联系人 ID）
+- 用户需先通过扫码/链接添加企业为客服后才能收到消息
+- 支持第三方传入 `access_token`（需来自具备「管理所有客服会话」权限的应用）
+- 或配置 `ManageAllKFSession: true` 的应用，由 DigEino 内部获取 token
+
 ## 修改的组件
 
 ### 新增文件
@@ -52,6 +59,9 @@ WeCom:
   Applications:
     - AgentID: 1000002                   # 应用 ID（应用管理 > 自建应用）
       AgentSecret: "xxx"                 # 应用 Secret
+    - AgentID: 1000003                   # 客服消息专用应用（需开通客户联系）
+      AgentSecret: "yyy"
+      ManageAllKFSession: true           # 管理所有客服会话，用于 send_wecom_customer_message
 ```
 
 ## 工具参数说明
@@ -69,8 +79,14 @@ WeCom:
 | | `description` (必填) | 卡片描述 |
 | | `url` (必填) | 点击跳转链接 |
 | | `agent_id` (可选) | 应用 ID |
+| `send_wecom_customer_message` | `open_kf_id` (必填) | 客服账号 ID |
+| | `customer_id` (必填) | 外部联系人 ID（external_userid） |
+| | `content` (必填) | 文字内容 |
+| | `access_token` (可选) | 第三方传入的 access_token |
 
 **user_id 来源**：由 DigFlow Agent 在调用时从会话上下文（如企业微信消息的 FromUserID）解析并传入。
+
+**客服消息前置**：用户需先通过企业微信客服链接/扫码添加企业为客服，系统会为每个用户分配 `external_userid`（即 `customer_id`）。`open_kf_id` 在企业微信管理后台创建客服账号后获得。
 
 ---
 

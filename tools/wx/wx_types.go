@@ -167,3 +167,18 @@ type WeComMessageAPIResponse struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
 }
+
+// SendWeComCustomerMessageRequest 发送企业微信客服消息的请求参数（发给个人微信用户）
+// 使用企业微信「客户联系」的客服能力，用户需先通过扫码/链接添加企业为客服后才可收到消息
+type SendWeComCustomerMessageRequest struct {
+	OpenKfID    string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID，在企业微信管理后台创建客服账号后获得"`
+	CustomerID  string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID（external_userid），用户添加企业为客服后产生"`
+	Content     string `json:"content" jsonschema:"required,description=必填：要发送的文字内容，建议不超过2048字符"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token，需来自具备「管理所有客服会话」权限的应用"`
+}
+
+// SendWeComCustomerMessageResponse 发送企业微信客服消息的响应
+type SendWeComCustomerMessageResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
