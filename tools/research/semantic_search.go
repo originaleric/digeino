@@ -3,6 +3,9 @@ package research
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cloudwego/eino-ext/components/document/loader/file"
@@ -291,12 +294,59 @@ func CodeIndex(ctx context.Context, req *CodeIndexRequest) (*CodeIndexResponse, 
 		return nil, err
 	}
 
-	_, err = runnable.Invoke(ctx, document.Source{URI: searchPath})
+	// 5. Execution Logic (Dir vs File)
+	var totalDocs int
+
+	info, err := os.Stat(searchPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("无法访问路径: %w", err)
 	}
 
-	return &CodeIndexResponse{Message: "索引任务已完成"}, nil
+	processFile := func(path string) error {
+		_, err := runnable.Invoke(ctx, document.Source{URI: path})
+		if err != nil {
+			// 记录错误但继续处理
+			fmt.Printf("索引文件失败 %s: %v\n", path, err)
+			return nil
+		}
+		totalDocs++
+		return nil
+	}
+
+	if info.IsDir() {
+		err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			if info.IsDir() {
+				// 忽略隐藏目录 (如 .git, .idea)
+				if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			// 忽略隐藏文件
+			if strings.HasPrefix(info.Name(), ".") {
+				return nil
+			}
+			// 简单的文件类型过滤
+			ext := strings.ToLower(filepath.Ext(path))
+			if ext != ".go" && ext != ".md" && ext != ".txt" && ext != ".yml" && ext != ".yaml" && ext != ".json" {
+				return nil
+			}
+
+			return processFile(path)
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := processFile(searchPath); err != nil {
+			return nil, err
+		}
+	}
+
+	return &CodeIndexResponse{Message: fmt.Sprintf("索引任务已完成，共处理 %d 个文件", totalDocs)}, nil
 }
 
 func NewSemanticSearchTool(ctx context.Context) (tool.BaseTool, error) {
