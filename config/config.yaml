@@ -1,4 +1,4 @@
-goHttpServer:
+HttpServer:
   Api:
     Port: ":20201"
 
@@ -62,3 +62,42 @@ UIUX:
     # 示例：
     # - AppName="travel": storage/app/ui_ux/travel/design-system/my-project/MASTER.md
     # - 未指定: storage/app/ui_ux/design-system/my-project/MASTER.md
+ 
+Tools:
+  Firecrawl:
+    ApiKey: ""
+  WebSearch:
+    Engine: "bocha" # bocha, serpapi, google
+    Bocha:
+      ApiKey: ""
+      BaseUrl: "https://api.bochaai.com"
+    SerpApi:
+      ApiKey: ""
+      BaseUrl: "https://serpapi.com/search"
+    Google:
+      ApiKey: ""
+      Cx: ""
+      BaseUrl: "https://www.googleapis.com/customsearch/v1"
+    Bing:
+      ApiKey: ""
+      MaxResults: 10
+      Region: "en-US"
+      SafeSearch: "Moderate" # Off, Moderate, Strict
+    DuckDuckGo:
+      MaxResults: 10
+      Region: "wt-wt"
+      SafeSearch: "Moderate" # Off, Moderate, Strict
+  Unstructured:
+    ApiKey: ""
+    BaseUrl: "https://api.unstructured.io/general/v0/general"
+  Pinecone:
+    ApiKey: ""
+    Host: ""
+    Namespace: "default"
+    IndexName: ""
+  Embedding:
+    Type: "qwen" # qwen, openai
+    ApiKey: ""
+    BaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    Model: "text-embedding-v2"
+    Dimensions: 1024

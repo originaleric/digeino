@@ -136,9 +136,46 @@ type FirecrawlConfig struct {
 
 // WebSearchConfig 网页搜索配置
 type WebSearchConfig struct {
-	Engine  string `yaml:"Engine" json:"Engine"`   // google, bing, serpapi, duckduckgo, bocha
-	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`   // API 密钥
-	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"` // (可选) API 基础地址
+	Engine     string           `yaml:"Engine" json:"Engine"` // bocha, serpapi, google, bing, duckduckgo
+	Bocha      BochaConfig      `yaml:"Bocha" json:"Bocha"`
+	SerpApi    SerpApiConfig    `yaml:"SerpApi" json:"SerpApi"`
+	Google     GoogleConfig     `yaml:"Google" json:"Google"`
+	Bing       BingConfig       `yaml:"Bing" json:"Bing"`
+	DuckDuckGo DuckDuckGoConfig `yaml:"DuckDuckGo" json:"DuckDuckGo"`
+}
+
+// BochaConfig 博查搜索配置
+type BochaConfig struct {
+	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"`
+}
+
+// SerpApiConfig SerpApi 搜索配置
+type SerpApiConfig struct {
+	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"`
+}
+
+// GoogleConfig Google Custom Search 配置
+type GoogleConfig struct {
+	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`
+	Cx      string `yaml:"Cx" json:"Cx"` // Custom Search Engine ID
+	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"`
+}
+
+// BingConfig Bing 搜索配置
+type BingConfig struct {
+	ApiKey     string `yaml:"ApiKey" json:"ApiKey"`
+	MaxResults int    `yaml:"MaxResults" json:"MaxResults"`
+	Region     string `yaml:"Region" json:"Region"`
+	SafeSearch string `yaml:"SafeSearch" json:"SafeSearch"`
+}
+
+// DuckDuckGoConfig DuckDuckGo 搜索配置
+type DuckDuckGoConfig struct {
+	MaxResults int    `yaml:"MaxResults" json:"MaxResults"`
+	Region     string `yaml:"Region" json:"Region"`
+	SafeSearch string `yaml:"SafeSearch" json:"SafeSearch"`
 }
 
 // UnstructuredConfig Unstructured.io 文档解析配置
@@ -252,7 +289,22 @@ func Default() *Config {
 				ApiKey: "",
 			},
 			WebSearch: WebSearchConfig{
-				Engine: "duckduckgo",
+				Engine: "bocha",
+				Bocha: BochaConfig{
+					BaseUrl: "https://api.bochaai.com",
+				},
+				SerpApi: SerpApiConfig{
+					BaseUrl: "https://serpapi.com/search",
+				},
+				Google: GoogleConfig{
+					BaseUrl: "https://www.googleapis.com/customsearch/v1",
+				},
+				Bing: BingConfig{
+					MaxResults: 10,
+				},
+				DuckDuckGo: DuckDuckGoConfig{
+					MaxResults: 10,
+				},
 			},
 			Unstructured: UnstructuredConfig{
 				ApiKey:  "",

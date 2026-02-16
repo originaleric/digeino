@@ -9,6 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloudwego/eino-ext/components/tool/bingsearch"
+	"github.com/cloudwego/eino-ext/components/tool/duckduckgo"
+	"github.com/cloudwego/eino-ext/components/tool/duckduckgo/ddgsearch"
+	"github.com/cloudwego/eino-ext/components/tool/googlesearch"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/originaleric/digeino/config"
@@ -44,16 +48,21 @@ func WebSearch(ctx context.Context, req *SearchRequest) (*SearchResponse, error)
 
 	switch engine {
 	case "bocha":
-		return searchBocha(ctx, toolCfg, req)
+		return searchBocha(ctx, toolCfg.Bocha, req)
 	case "serpapi":
-		return searchSerpApi(ctx, toolCfg, req)
+		return searchSerpApi(ctx, toolCfg.SerpApi, req)
+	case "google":
+		return searchGoogle(ctx, toolCfg.Google, req)
+	case "bing":
+		return searchBing(ctx, toolCfg.Bing, req)
+	case "duckduckgo":
+		return searchDuckDuckGo(ctx, toolCfg.DuckDuckGo, req)
 	default:
-		// 暂时返回 Mock 结果或错误
-		return nil, fmt.Errorf("暂不支持的搜索引擎: %s，请配置 bocha 或 serpapi", engine)
+		return nil, fmt.Errorf("暂不支持的搜索引擎: %s，请配置 bocha, serpapi, google, bing 或 duckduckgo", engine)
 	}
 }
 
-func searchBocha(ctx context.Context, cfg config.WebSearchConfig, req *SearchRequest) (*SearchResponse, error) {
+func searchBocha(ctx context.Context, cfg config.BochaConfig, req *SearchRequest) (*SearchResponse, error) {
 	if cfg.ApiKey == "" {
 		return nil, fmt.Errorf("bocha 搜索需要配置 ApiKey")
 	}
@@ -143,7 +152,7 @@ func searchBocha(ctx context.Context, cfg config.WebSearchConfig, req *SearchReq
 	return &SearchResponse{Results: finalResults}, nil
 }
 
-func searchSerpApi(ctx context.Context, cfg config.WebSearchConfig, req *SearchRequest) (*SearchResponse, error) {
+func searchSerpApi(ctx context.Context, cfg config.SerpApiConfig, req *SearchRequest) (*SearchResponse, error) {
 	if cfg.ApiKey == "" {
 		return nil, fmt.Errorf("serpapi 搜索需要配置 ApiKey")
 	}
@@ -193,6 +202,158 @@ func searchSerpApi(ctx context.Context, cfg config.WebSearchConfig, req *SearchR
 	}
 
 	return &SearchResponse{Results: finalResults}, nil
+}
+
+func searchGoogle(ctx context.Context, cfg config.GoogleConfig, req *SearchRequest) (*SearchResponse, error) {
+	if cfg.ApiKey == "" || cfg.Cx == "" {
+		return nil, fmt.Errorf("google 搜索需要配置 ApiKey 和 Cx")
+	}
+
+	officialConfig := &googlesearch.Config{
+		APIKey:         cfg.ApiKey,
+		SearchEngineID: cfg.Cx,
+		BaseURL:        cfg.BaseUrl,
+	}
+
+	tl, err := googlesearch.NewTool(ctx, officialConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create official google search tool: %w", err)
+	}
+
+	officialReq := &googlesearch.SearchRequest{
+		Query: req.Query,
+		Num:   req.MaxResults,
+	}
+	reqData, _ := json.Marshal(officialReq)
+
+	// 调用官方工具
+	respJson, err := tl.InvokableRun(ctx, string(reqData))
+	if err != nil {
+		return nil, fmt.Errorf("google search invoke failed: %w", err)
+	}
+
+	// 解析官方输出 (SearchResult 结构在 googlesearch 包中定义为 SearchResult{Query, Items: []*SimplifiedSearchItem})
+	var officialResp struct {
+		Items []struct {
+			Link    string `json:"link"`
+			Title   string `json:"title"`
+			Snippet string `json:"snippet"`
+			Desc    string `json:"desc"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal([]byte(respJson), &officialResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal official google response: %w", err)
+	}
+
+	results := make([]SearchResult, 0, len(officialResp.Items))
+	for _, item := range officialResp.Items {
+		desc := item.Snippet
+		if item.Desc != "" {
+			desc = item.Desc
+		}
+		results = append(results, SearchResult{
+			Title:       item.Title,
+			URL:         item.Link,
+			Description: desc,
+		})
+	}
+
+	return &SearchResponse{Results: results}, nil
+}
+
+func searchBing(ctx context.Context, cfg config.BingConfig, req *SearchRequest) (*SearchResponse, error) {
+	if cfg.ApiKey == "" {
+		return nil, fmt.Errorf("bing 搜索需要配置 ApiKey")
+	}
+
+	officialConfig := &bingsearch.Config{
+		APIKey:     cfg.ApiKey,
+		MaxResults: cfg.MaxResults,
+		Region:     bingsearch.Region(cfg.Region),
+		SafeSearch: bingsearch.SafeSearch(cfg.SafeSearch),
+	}
+
+	tl, err := bingsearch.NewTool(ctx, officialConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create official bing search tool: %w", err)
+	}
+
+	officialReq := &bingsearch.SearchRequest{
+		Query: req.Query,
+	}
+	reqData, _ := json.Marshal(officialReq)
+
+	respJson, err := tl.InvokableRun(ctx, string(reqData))
+	if err != nil {
+		return nil, fmt.Errorf("bing search invoke failed: %w", err)
+	}
+
+	var officialResp struct {
+		Results []struct {
+			Title       string `json:"title"`
+			URL         string `json:"url"`
+			Description string `json:"description"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(respJson), &officialResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal official bing response: %w", err)
+	}
+
+	results := make([]SearchResult, 0, len(officialResp.Results))
+	for _, item := range officialResp.Results {
+		results = append(results, SearchResult{
+			Title:       item.Title,
+			URL:         item.URL,
+			Description: item.Description,
+		})
+	}
+
+	return &SearchResponse{Results: results}, nil
+}
+
+func searchDuckDuckGo(ctx context.Context, cfg config.DuckDuckGoConfig, req *SearchRequest) (*SearchResponse, error) {
+	officialConfig := &duckduckgo.Config{
+		MaxResults: cfg.MaxResults,
+		Region:     ddgsearch.Region(cfg.Region),
+		SafeSearch: ddgsearch.SafeSearch(cfg.SafeSearch),
+	}
+
+	tl, err := duckduckgo.NewTool(ctx, officialConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create official ddg search tool: %w", err)
+	}
+
+	officialReq := &duckduckgo.SearchRequest{
+		Query: req.Query,
+	}
+	reqData, _ := json.Marshal(officialReq)
+
+	respJson, err := tl.InvokableRun(ctx, string(reqData))
+	if err != nil {
+		return nil, fmt.Errorf("ddg search invoke failed: %w", err)
+	}
+
+	var officialResp struct {
+		Results []struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Link        string `json:"link"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(respJson), &officialResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal official ddg response: %w", err)
+	}
+
+	results := make([]SearchResult, 0, len(officialResp.Results))
+	for _, item := range officialResp.Results {
+		results = append(results, SearchResult{
+			Title:       item.Title,
+			URL:         item.Link,
+			Description: item.Description,
+		})
+	}
+
+	return &SearchResponse{Results: results}, nil
 }
 
 func NewWebSearchTool(ctx context.Context) (tool.BaseTool, error) {
