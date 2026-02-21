@@ -7,6 +7,7 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
 	"github.com/originaleric/digeino/tools/research"
+	"github.com/originaleric/digeino/tools/research/websearch"
 	"github.com/originaleric/digeino/tools/ui_ux"
 	"github.com/originaleric/digeino/tools/wx"
 )
@@ -104,7 +105,7 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, firecrawlTool)
 	}
-	webSearchTool, err := research.NewWebSearchTool(ctx)
+	webSearchTool, err := websearch.NewWebSearchTool(ctx)
 	if err == nil {
 		tools = append(tools, webSearchTool)
 	}

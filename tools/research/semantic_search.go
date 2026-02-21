@@ -20,6 +20,7 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 	"github.com/originaleric/digeino/config"
+	"github.com/originaleric/digeino/tools/research/websearch"
 	"github.com/pinecone-io/go-pinecone/v4/pinecone"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -178,7 +179,7 @@ type SemanticSearchRequest struct {
 }
 
 type SemanticSearchResponse struct {
-	Results []SearchResult `json:"results"`
+	Results []websearch.SearchResult `json:"results"`
 }
 
 func SemanticSearch(ctx context.Context, req *SemanticSearchRequest) (*SemanticSearchResponse, error) {
@@ -215,9 +216,9 @@ func SemanticSearch(ctx context.Context, req *SemanticSearchRequest) (*SemanticS
 		return nil, err
 	}
 
-	var results []SearchResult
+	var results []websearch.SearchResult
 	for _, doc := range docs {
-		results = append(results, SearchResult{
+		results = append(results, websearch.SearchResult{
 			Title:       doc.ID,
 			URL:         doc.MetaData["path"].(string), // 假设分块时带了 path
 			Description: doc.Content,
