@@ -117,6 +117,10 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, codeIndexTool)
 	}
+	jinaReaderTool, err := research.NewJinaReaderTool(ctx)
+	if err == nil {
+		tools = append(tools, jinaReaderTool)
+	}
 	writeFileTool, err := research.NewWriteFileTool(ctx)
 	if err == nil {
 		tools = append(tools, writeFileTool)
