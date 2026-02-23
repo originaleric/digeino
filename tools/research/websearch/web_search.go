@@ -3,6 +3,7 @@ package websearch
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -47,10 +48,27 @@ func WebSearch(ctx context.Context, req *SearchRequest) (*SearchResponse, error)
 		configMap["BingApiKey"] = toolCfg.Bing.ApiKey
 		// configMap["BingSafeSearch"] = toolCfg.Bing.SafeSearch
 		provider, err = NewBingProvider(configMap)
+	case "firecrawl":
+		// Firecrawl Search 复用全局 Firecrawl ApiKey（与 firecrawl_scrape 相同）
+		firecrawlCfg := cfg.Tools.Firecrawl
+		apiKey := firecrawlCfg.ApiKey
+		if apiKey == "" {
+			apiKey = os.Getenv("FIRECRAWL_API_KEY")
+		}
+		if apiKey == "" {
+			err = fmt.Errorf("Firecrawl ApiKey 未配置，可在 Tools.Firecrawl 或环境变量 FIRECRAWL_API_KEY 中设置")
+			break
+		}
+		configMap["FirecrawlApiKey"] = apiKey
+		// 预留自定义 BaseUrl 能力
+		if toolCfg.SerpApi.BaseUrl != "" {
+			configMap["FirecrawlBaseUrl"] = toolCfg.SerpApi.BaseUrl
+		}
+		provider, err = NewFirecrawlProvider(configMap)
 	case "duckduckgo":
 		provider = NewDuckDuckGoProvider(configMap)
 	default:
-		return nil, fmt.Errorf("暂不支持的搜索引擎: %s，请配置 bocha, serpapi, google, bing 或 duckduckgo", engine)
+		return nil, fmt.Errorf("暂不支持的搜索引擎: %s，请配置 bocha, serpapi, google, bing, duckduckgo 或 firecrawl", engine)
 	}
 
 	if err != nil {

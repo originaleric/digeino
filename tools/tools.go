@@ -126,6 +126,12 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 		tools = append(tools, writeFileTool)
 	}
 
+	// 5. 本地无头浏览器抓取工具（高级反爬场景，如微信公众号）
+	localScraperTool, err := research.NewLocalScraperTool(ctx)
+	if err == nil {
+		tools = append(tools, localScraperTool)
+	}
+
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil
 }
