@@ -67,7 +67,7 @@ Tools:
   Firecrawl:
     ApiKey: ""
   WebSearch:
-    Engine: "bocha" # bocha, serpapi, google
+    Engine: "bocha" # bocha, serpapi, google, bing, duckduckgo, firecrawl, tavily
     Bocha:
       ApiKey: ""
       BaseUrl: "https://api.bochaai.com"
@@ -83,6 +83,11 @@ Tools:
       MaxResults: 10
       Region: "en-US"
       SafeSearch: "Moderate" # Off, Moderate, Strict
+    Tavily:
+      ApiKey: ""                    # 或环境变量 TAVILY_API_KEY
+      BaseUrl: "https://api.tavily.com"
+      SearchDepth: "basic"          # basic | fast | advanced | ultra-fast
+      Topic: "general"              # general | news | finance
     DuckDuckGo:
       MaxResults: 10
       Region: "wt-wt"

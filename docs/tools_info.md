@@ -20,8 +20,19 @@
 | :--- | :--- | :--- |
 | `research_semantic_search` | **向量语义搜索**。基于 Pinecone，通过相似度定位偏逻辑意图的内容。 | `query`: 搜索意图; `max_results`: 结果数 |
 | `research_code_index` | **项目索引工具**。扫描指定目录并将代码/文档向量化存入 Pinecone。 | `path`: 目标目录 |
-| `web_search` | **统一网页搜索**。支持 Bocha, SerpApi, Google, Bing 和 DuckDuckGo 引擎。 | `query`: 搜索词; `max_results`: 结果数 |
+| `web_search` | **统一网页搜索**。支持 Bocha, SerpApi, Google, Bing, DuckDuckGo, Firecrawl 和 Tavily 引擎。 | `query`: 搜索词; `max_results`: 结果数; `region`: 地区 |
 | `firecrawl_scrape` | **深度网页爬取**。调用 Firecrawl API 将 URL 转换为清洗后的 Markdown。 | `url`: 目标网页地址 |
+| `research_jina_reader` | **高级网页抓取**。使用 Jina Reader (r.jina.ai) 深度读取网页并转换为 Markdown，对微信公众号、知乎等强反爬平台有较好兼容性。 | `url`: 目标网页地址 |
+| `research_local_scraper` | **本地无头浏览器抓取**。使用 go-rod + stealth 绕过复杂反爬（如微信公众号），抓取正文并输出 Text 与 Markdown。 | `url`: 目标网页地址 |
+
+**web_search 引擎选择**：
+
+| 引擎 | 特点 | 配置 |
+|------|------|------|
+| Bocha | 国内服务，中文友好 | `Tools.WebSearch.Bocha.ApiKey` |
+| Firecrawl | 与 scrape 共用 ApiKey | `Tools.Firecrawl.ApiKey` |
+| **Tavily** | 面向 AI、低延迟、英文/国际搜索 | `Tools.WebSearch.Tavily.ApiKey` 或 `TAVILY_API_KEY` |
+| SerpApi/Google | 依赖第三方 API | 各自 ApiKey |
 
 ---
 
@@ -80,9 +91,9 @@ func main() {
     
     // 方式 B：手动设置关键参数（如从环境变量读取）
     cfg := config.Get()
-    cfg.Tools.WebSearch.Engine = "google"
-    cfg.Tools.WebSearch.Google.ApiKey = "..."
-    cfg.Tools.WebSearch.Google.Cx = "..."
+    cfg.Tools.WebSearch.Engine = "tavily"
+    cfg.Tools.WebSearch.Tavily.ApiKey = os.Getenv("TAVILY_API_KEY")
+    // 或使用 Google: cfg.Tools.WebSearch.Google.ApiKey = "..."
     cfg.Tools.Pinecone.ApiKey = os.Getenv("PINECONE_KEY")
 }
 ```

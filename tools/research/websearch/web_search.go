@@ -65,10 +65,31 @@ func WebSearch(ctx context.Context, req *SearchRequest) (*SearchResponse, error)
 			configMap["FirecrawlBaseUrl"] = toolCfg.SerpApi.BaseUrl
 		}
 		provider, err = NewFirecrawlProvider(configMap)
+	case "tavily":
+		tavilyCfg := toolCfg.Tavily
+		apiKey := tavilyCfg.ApiKey
+		if apiKey == "" {
+			apiKey = os.Getenv("TAVILY_API_KEY")
+		}
+		if apiKey == "" {
+			err = fmt.Errorf("Tavily ApiKey 未配置，可在 Tools.WebSearch.Tavily.ApiKey 或环境变量 TAVILY_API_KEY 中设置")
+			break
+		}
+		configMap["TavilyApiKey"] = apiKey
+		if tavilyCfg.BaseUrl != "" {
+			configMap["TavilyBaseUrl"] = tavilyCfg.BaseUrl
+		}
+		if tavilyCfg.SearchDepth != "" {
+			configMap["TavilySearchDepth"] = tavilyCfg.SearchDepth
+		}
+		if tavilyCfg.Topic != "" {
+			configMap["TavilyTopic"] = tavilyCfg.Topic
+		}
+		provider, err = NewTavilyProvider(configMap)
 	case "duckduckgo":
 		provider = NewDuckDuckGoProvider(configMap)
 	default:
-		return nil, fmt.Errorf("暂不支持的搜索引擎: %s，请配置 bocha, serpapi, google, bing, duckduckgo 或 firecrawl", engine)
+		return nil, fmt.Errorf("暂不支持的搜索引擎: %s，请配置 bocha, serpapi, google, bing, duckduckgo, firecrawl 或 tavily", engine)
 	}
 
 	if err != nil {

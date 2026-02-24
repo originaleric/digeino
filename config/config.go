@@ -136,11 +136,12 @@ type FirecrawlConfig struct {
 
 // WebSearchConfig 网页搜索配置
 type WebSearchConfig struct {
-	Engine     string           `yaml:"Engine" json:"Engine"` // bocha, serpapi, google, bing, duckduckgo
-	Bocha      BochaConfig      `yaml:"Bocha" json:"Bocha"`
-	SerpApi    SerpApiConfig    `yaml:"SerpApi" json:"SerpApi"`
-	Google     GoogleConfig     `yaml:"Google" json:"Google"`
-	Bing       BingConfig       `yaml:"Bing" json:"Bing"`
+	Engine     string           `yaml:"Engine" json:"Engine"` // bocha, serpapi, google, bing, duckduckgo, firecrawl, tavily
+	Bocha      BochaConfig     `yaml:"Bocha" json:"Bocha"`
+	SerpApi    SerpApiConfig   `yaml:"SerpApi" json:"SerpApi"`
+	Google     GoogleConfig    `yaml:"Google" json:"Google"`
+	Bing       BingConfig      `yaml:"Bing" json:"Bing"`
+	Tavily     TavilyConfig    `yaml:"Tavily" json:"Tavily"`
 	DuckDuckGo DuckDuckGoConfig `yaml:"DuckDuckGo" json:"DuckDuckGo"`
 }
 
@@ -169,6 +170,14 @@ type BingConfig struct {
 	MaxResults int    `yaml:"MaxResults" json:"MaxResults"`
 	Region     string `yaml:"Region" json:"Region"`
 	SafeSearch string `yaml:"SafeSearch" json:"SafeSearch"`
+}
+
+// TavilyConfig Tavily 搜索配置
+type TavilyConfig struct {
+	ApiKey      string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl     string `yaml:"BaseUrl" json:"BaseUrl"`           // 可选，默认 https://api.tavily.com
+	SearchDepth string `yaml:"SearchDepth" json:"SearchDepth"`   // basic, fast, advanced, ultra-fast
+	Topic       string `yaml:"Topic" json:"Topic"`               // general, news, finance
 }
 
 // DuckDuckGoConfig DuckDuckGo 搜索配置
@@ -301,6 +310,11 @@ func Default() *Config {
 				},
 				Bing: BingConfig{
 					MaxResults: 10,
+				},
+				Tavily: TavilyConfig{
+					BaseUrl:     "https://api.tavily.com",
+					SearchDepth: "basic",
+					Topic:       "general",
 				},
 				DuckDuckGo: DuckDuckGoConfig{
 					MaxResults: 10,
