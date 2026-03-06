@@ -4,7 +4,7 @@ go 1.24.8
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
-	github.com/cloudwego/eino v0.7.14
+	github.com/cloudwego/eino v0.8.0-alpha.12
 	github.com/cloudwego/eino-ext/components/document/loader/file v0.0.0-20260204064123-1f91f547c77e
 	github.com/cloudwego/eino-ext/components/document/transformer/splitter/markdown v0.0.0-20260204064123-1f91f547c77e
 	github.com/cloudwego/eino-ext/components/embedding/openai v0.0.0-20260204064123-1f91f547c77e

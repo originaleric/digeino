@@ -288,6 +288,12 @@ func GetDefaultStore() StatusStore {
 	if cfg.Type == "memory" {
 		return NewMemoryStatusStore(1000)
 	}
-	store, _ := NewMySQLStatusStore(cfg)
+	store, err := NewMySQLStatusStore(cfg)
+	if err != nil {
+		return NewMemoryStatusStore(1000)
+	}
+	if store == nil {
+		return NewMemoryStatusStore(1000)
+	}
 	return store
 }

@@ -29,6 +29,9 @@ type ExecutionStatus struct {
 	// 执行上下文
 	AppName   string `json:"app_name"`   // Agent 名称
 	RequestID string `json:"request_id"` // 请求 ID（可选）
+
+	// Usage 信息（可选）
+	Usage *Usage `json:"usage,omitempty"` // Token 使用统计
 }
 
 // DataFlowStatus 数据流状态

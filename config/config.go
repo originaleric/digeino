@@ -24,10 +24,16 @@ type HttpServerConfig struct {
 	} `yaml:"Api" json:"Api"`
 }
 
-// StatusConfig 状态相关配置：包含 Webhook 与 Store
+// StatusConfig 状态相关配置：包含 Webhook、Store 与 DataFlow
 type StatusConfig struct {
-	Webhook AppWebhookConfig  `yaml:"Webhook" json:"Webhook"`
-	Store   StatusStoreConfig `yaml:"Store" json:"Store"`
+	Webhook  AppWebhookConfig  `yaml:"Webhook" json:"Webhook"`
+	Store    StatusStoreConfig `yaml:"Store" json:"Store"`
+	DataFlow DataFlowConfig    `yaml:"DataFlow" json:"DataFlow"`
+}
+
+// DataFlowConfig DataFlow 追踪配置
+type DataFlowConfig struct {
+	Enabled *bool `yaml:"Enabled" json:"Enabled,omitempty"` // 是否启用，nil 或 false 表示禁用（默认关闭）
 }
 
 // AppWebhookConfig 应用级 Webhook 配置
@@ -248,6 +254,7 @@ func Set(cfg *Config) {
 func Default() *Config {
 	enabled := true
 	wechatDisabled := false
+	dataFlowDisabled := false
 	return &Config{
 		HttpServer: HttpServerConfig{
 			Api: struct {
@@ -269,6 +276,9 @@ func Default() *Config {
 			Store: StatusStoreConfig{
 				Enabled: &enabled,
 				Type:    "memory",
+			},
+			DataFlow: DataFlowConfig{
+				Enabled: &dataFlowDisabled,
 			},
 		},
 		WeChat: WeChatConfig{
