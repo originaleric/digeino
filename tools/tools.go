@@ -87,6 +87,30 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, wecomCustomerTool)
 	}
+	wecomCustomerImageTool, err := wx.NewWeComCustomerImageTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerImageTool)
+	}
+	wecomCustomerVoiceTool, err := wx.NewWeComCustomerVoiceTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerVoiceTool)
+	}
+	wecomCustomerVideoTool, err := wx.NewWeComCustomerVideoTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerVideoTool)
+	}
+	wecomCustomerFileTool, err := wx.NewWeComCustomerFileTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerFileTool)
+	}
+	wecomCustomerLinkTool, err := wx.NewWeComCustomerLinkTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerLinkTool)
+	}
+	wecomCustomerMiniprogramTool, err := wx.NewWeComCustomerMiniprogramTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomCustomerMiniprogramTool)
+	}
 
 	// 4. 通用调研系列工具
 	grepTool, err := research.NewGrepSearchTool(ctx)

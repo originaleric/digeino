@@ -147,6 +147,56 @@ func getWeComCustomerApp() (*workwx.WorkwxApp, error) {
 	return wx.WithApp(corpSecret, targetAgentID), nil
 }
 
+// getWeComCustomerAccessToken 获取具备「管理所有客服会话」权限的应用的 access_token，用于客服 API 调用
+func getWeComCustomerAccessToken(ctx context.Context) (string, error) {
+	cfg := config.Get()
+	if cfg.WeCom.CorpID == "" {
+		return "", fmt.Errorf("WeCom CorpID not configured")
+	}
+	var corpSecret string
+	for _, app := range cfg.WeCom.Applications {
+		if app.ManageAllKFSession {
+			corpSecret = app.AgentSecret
+			break
+		}
+	}
+	if corpSecret == "" {
+		return "", fmt.Errorf("no WeCom application with ManageAllKFSession=true found in config")
+	}
+	baseURL := getWeComAPIHost()
+	url := fmt.Sprintf("%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s", baseURL, cfg.WeCom.CorpID, corpSecret)
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("create gettoken request: %w", err)
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("call gettoken: %w", err)
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read gettoken response: %w", err)
+	}
+	var apiResp struct {
+		ErrCode     int    `json:"errcode"`
+		ErrMsg      string `json:"errmsg"`
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
+	}
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return "", fmt.Errorf("parse gettoken response: %w", err)
+	}
+	if apiResp.ErrCode != 0 {
+		return "", fmt.Errorf("WeCom gettoken errcode=%d errmsg=%s", apiResp.ErrCode, apiResp.ErrMsg)
+	}
+	if apiResp.AccessToken == "" {
+		return "", fmt.Errorf("WeCom gettoken returned empty access_token")
+	}
+	return apiResp.AccessToken, nil
+}
+
 // getWeComApp 获取企业微信应用客户端
 func getWeComApp(agentID int64) (*workwx.WorkwxApp, error) {
 	cfg := config.Get()
@@ -410,4 +460,213 @@ func SendWeComCustomerMessage(ctx context.Context, req SendWeComCustomerMessageR
 		return SendWeComCustomerMessageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
 	}
 	return SendWeComCustomerMessageResponse{Success: true, Message: "客服消息发送成功"}, nil
+}
+
+// SendWeComCustomerImage 发送企业微信客服图片消息（发给个人微信用户）
+func SendWeComCustomerImage(ctx context.Context, req SendWeComCustomerImageRequest) (SendWeComCustomerImageResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerImageResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerImageResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.MediaID == "" {
+		return SendWeComCustomerImageResponse{}, fmt.Errorf("media_id is required")
+	}
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComCustomerImageResponse{}, err
+		}
+	}
+	body := map[string]interface{}{
+		"msgtype": "image",
+		"image":   map[string]string{"media_id": req.MediaID},
+	}
+	if err := sendWeComCustomerMessageAPI(ctx, accessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+		return SendWeComCustomerImageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerImageResponse{Success: true, Message: "客服图片消息发送成功"}, nil
+}
+
+// SendWeComCustomerVoice 发送企业微信客服语音消息（发给个人微信用户）
+func SendWeComCustomerVoice(ctx context.Context, req SendWeComCustomerVoiceRequest) (SendWeComCustomerVoiceResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerVoiceResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerVoiceResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.MediaID == "" {
+		return SendWeComCustomerVoiceResponse{}, fmt.Errorf("media_id is required")
+	}
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComCustomerVoiceResponse{}, err
+		}
+	}
+	body := map[string]interface{}{
+		"msgtype": "voice",
+		"voice":   map[string]string{"media_id": req.MediaID},
+	}
+	if err := sendWeComCustomerMessageAPI(ctx, accessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+		return SendWeComCustomerVoiceResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerVoiceResponse{Success: true, Message: "客服语音消息发送成功"}, nil
+}
+
+// SendWeComCustomerVideo 发送企业微信客服视频消息（发给个人微信用户）
+func SendWeComCustomerVideo(ctx context.Context, req SendWeComCustomerVideoRequest) (SendWeComCustomerVideoResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerVideoResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerVideoResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.MediaID == "" {
+		return SendWeComCustomerVideoResponse{}, fmt.Errorf("media_id is required")
+	}
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComCustomerVideoResponse{}, err
+		}
+	}
+	videoObj := map[string]string{"media_id": req.MediaID}
+	if req.Title != "" {
+		videoObj["title"] = req.Title
+	}
+	if req.Description != "" {
+		videoObj["description"] = req.Description
+	}
+	body := map[string]interface{}{
+		"msgtype": "video",
+		"video":   videoObj,
+	}
+	if err := sendWeComCustomerMessageAPI(ctx, accessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+		return SendWeComCustomerVideoResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerVideoResponse{Success: true, Message: "客服视频消息发送成功"}, nil
+}
+
+// SendWeComCustomerFile 发送企业微信客服文件消息（发给个人微信用户）
+func SendWeComCustomerFile(ctx context.Context, req SendWeComCustomerFileRequest) (SendWeComCustomerFileResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerFileResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerFileResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.MediaID == "" {
+		return SendWeComCustomerFileResponse{}, fmt.Errorf("media_id is required")
+	}
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComCustomerFileResponse{}, err
+		}
+	}
+	body := map[string]interface{}{
+		"msgtype": "file",
+		"file":   map[string]string{"media_id": req.MediaID},
+	}
+	if err := sendWeComCustomerMessageAPI(ctx, accessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+		return SendWeComCustomerFileResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerFileResponse{Success: true, Message: "客服文件消息发送成功"}, nil
+}
+
+// SendWeComCustomerLink 发送企业微信客服图文链接消息（发给个人微信用户）
+func SendWeComCustomerLink(ctx context.Context, req SendWeComCustomerLinkRequest) (SendWeComCustomerLinkResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerLinkResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerLinkResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.Title == "" {
+		return SendWeComCustomerLinkResponse{}, fmt.Errorf("title is required")
+	}
+	if req.Desc == "" {
+		return SendWeComCustomerLinkResponse{}, fmt.Errorf("desc is required")
+	}
+	if req.URL == "" {
+		return SendWeComCustomerLinkResponse{}, fmt.Errorf("url is required")
+	}
+	if req.ThumbMediaID == "" {
+		return SendWeComCustomerLinkResponse{}, fmt.Errorf("thumb_media_id is required")
+	}
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComCustomerLinkResponse{}, err
+		}
+	}
+	body := map[string]interface{}{
+		"msgtype": "link",
+		"link": map[string]string{
+			"title":          req.Title,
+			"desc":           req.Desc,
+			"url":            req.URL,
+			"thumb_media_id": req.ThumbMediaID,
+		},
+	}
+	if err := sendWeComCustomerMessageAPI(ctx, accessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+		return SendWeComCustomerLinkResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerLinkResponse{Success: true, Message: "客服图文链接消息发送成功"}, nil
+}
+
+// SendWeComCustomerMiniprogram 发送企业微信客服小程序卡片（发给个人微信用户）
+func SendWeComCustomerMiniprogram(ctx context.Context, req SendWeComCustomerMiniprogramRequest) (SendWeComCustomerMiniprogramResponse, error) {
+	if req.OpenKfID == "" {
+		return SendWeComCustomerMiniprogramResponse{}, fmt.Errorf("open_kf_id is required")
+	}
+	if req.CustomerID == "" {
+		return SendWeComCustomerMiniprogramResponse{}, fmt.Errorf("customer_id is required")
+	}
+	if req.Title == "" {
+		return SendWeComCustomerMiniprogramResponse{}, fmt.Errorf("title is required")
+	}
+	if req.AppID == "" {
+		return SendWeComCustomerMiniprogramResponse{}, fmt.Errorf("appid is required")
+	}
+	if req.ThumbMediaID == "" {
+		return SendWeComCustomerMiniprogramResponse{}, fmt.Errorf("thumb_media_id is required")
+	}
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComCustomerMiniprogramResponse{}, err
+		}
+	}
+	miniprogramObj := map[string]string{
+		"title":          req.Title,
+		"appid":          req.AppID,
+		"thumb_media_id": req.ThumbMediaID,
+	}
+	if req.PagePath != "" {
+		miniprogramObj["pagepath"] = req.PagePath
+	}
+	body := map[string]interface{}{
+		"msgtype":     "miniprogram",
+		"miniprogram": miniprogramObj,
+	}
+	if err := sendWeComCustomerMessageAPI(ctx, accessToken, req.OpenKfID, req.CustomerID, body); err != nil {
+		return SendWeComCustomerMiniprogramResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComCustomerMiniprogramResponse{Success: true, Message: "客服小程序卡片发送成功"}, nil
 }

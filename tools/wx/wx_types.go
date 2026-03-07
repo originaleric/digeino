@@ -182,3 +182,95 @@ type SendWeComCustomerMessageResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
+
+// SendWeComCustomerImageRequest 发送企业微信客服图片消息的请求参数（发给个人微信用户）
+type SendWeComCustomerImageRequest struct {
+	OpenKfID    string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`
+	CustomerID  string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID（external_userid）"`
+	MediaID     string `json:"media_id" jsonschema:"required,description=必填：图片的 media_id，通过上传临时素材接口获得"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComCustomerImageResponse 发送企业微信客服图片消息的响应
+type SendWeComCustomerImageResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComCustomerVoiceRequest 发送企业微信客服语音消息的请求参数（发给个人微信用户）
+type SendWeComCustomerVoiceRequest struct {
+	OpenKfID    string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`
+	CustomerID  string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID"`
+	MediaID     string `json:"media_id" jsonschema:"required,description=必填：语音的 media_id，通过上传临时素材接口获得"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComCustomerVoiceResponse 发送企业微信客服语音消息的响应
+type SendWeComCustomerVoiceResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComCustomerVideoRequest 发送企业微信客服视频消息的请求参数（发给个人微信用户）
+type SendWeComCustomerVideoRequest struct {
+	OpenKfID    string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`
+	CustomerID  string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID"`
+	MediaID     string `json:"media_id" jsonschema:"required,description=必填：视频的 media_id，通过上传临时素材接口获得"`
+	Title       string `json:"title" jsonschema:"description=可选：视频标题"`
+	Description string `json:"description" jsonschema:"description=可选：视频描述"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComCustomerVideoResponse 发送企业微信客服视频消息的响应
+type SendWeComCustomerVideoResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComCustomerFileRequest 发送企业微信客服文件消息的请求参数（发给个人微信用户）
+type SendWeComCustomerFileRequest struct {
+	OpenKfID    string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`
+	CustomerID  string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID"`
+	MediaID     string `json:"media_id" jsonschema:"required,description=必填：文件的 media_id，通过上传临时素材接口获得"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComCustomerFileResponse 发送企业微信客服文件消息的响应
+type SendWeComCustomerFileResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComCustomerLinkRequest 发送企业微信客服图文链接消息的请求参数（发给个人微信用户）
+type SendWeComCustomerLinkRequest struct {
+	OpenKfID      string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`
+	CustomerID    string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID"`
+	Title         string `json:"title" jsonschema:"required,description=必填：链接标题"`
+	Desc          string `json:"desc" jsonschema:"required,description=必填：链接描述"`
+	URL           string `json:"url" jsonschema:"required,description=必填：点击跳转的 URL"`
+	ThumbMediaID  string `json:"thumb_media_id" jsonschema:"required,description=必填：封面图 media_id，通过上传临时素材获得"`
+	AccessToken   string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComCustomerLinkResponse 发送企业微信客服图文链接消息的响应
+type SendWeComCustomerLinkResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// SendWeComCustomerMiniprogramRequest 发送企业微信客服小程序卡片的请求参数（发给个人微信用户）
+type SendWeComCustomerMiniprogramRequest struct {
+	OpenKfID       string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`
+	CustomerID     string `json:"customer_id" jsonschema:"required,description=必填：外部联系人 ID"`
+	Title          string `json:"title" jsonschema:"required,description=必填：小程序卡片标题"`
+	AppID          string `json:"appid" jsonschema:"required,description=必填：小程序 appid"`
+	PagePath       string `json:"pagepath" jsonschema:"description=可选：小程序页面路径"`
+	ThumbMediaID   string `json:"thumb_media_id" jsonschema:"required,description=必填：封面图 media_id，通过上传临时素材获得"`
+	AccessToken    string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComCustomerMiniprogramResponse 发送企业微信客服小程序卡片的响应
+type SendWeComCustomerMiniprogramResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
