@@ -59,6 +59,19 @@
   - **Tavily**：配置 `Tools.WebSearch.Tavily.ApiKey` 或环境变量 `TAVILY_API_KEY`；可选 `SearchDepth`（basic/fast/advanced/ultra-fast）、`Topic`（general/news/finance）。
 - **最佳实践**：当所有抓取工具均失败时，使用 `web_search` 搜索目标 URL，获取 Bocha/Firecrawl/Tavily 的快照摘要作为 L4 兜底方案。英文/国际搜索场景推荐 Tavily。
 
+### 8. 通用本地浏览器访问 (`browser_browse`)
+- **功能**：使用 go-rod + stealth 在本地无头浏览器中访问网页，支持正文提取与整页截图。
+- **参数**：
+  - `url`: 目标网页地址（必填）。
+  - `action`: `read` / `screenshot`，默认 `read`。
+  - `wait_selector`: (可选) 指定 CSS 选择器并等待其出现。
+  - `use_cookie_domain`: (可选) 从 `Tools.LocalBrowser.CookieStoreDir` 加载指定域名 Cookie 并在结束后回写。
+- **返回**：
+  - `read`: 返回 `title`、`text`、`markdown`。
+  - `screenshot`: 返回 `title`、`screenshot_base64`。
+- **配置**：通过 `Tools.LocalBrowser` 控制启用、并发、超时、域名白名单与 Cookie 目录。
+- **最佳实践**：适合动态渲染页面、复杂反爬页面和需要截图证据的场景。生产环境建议配置 `AllowedDomains` 以限制可访问域。
+
 ---
 
 ## 如何在 Agent 编排中使用
@@ -79,6 +92,8 @@ Tools:
     UseGlobal: true
   - Name: "research_local_scraper"
     UseGlobal: true
+  - Name: "browser_browse"
+    UseGlobal: true
   - Name: "web_search"
     UseGlobal: true
 ```
@@ -89,8 +104,9 @@ Tools:
 
 1. **L1 (轻量级)**：优先使用 `firecrawl_scrape`（速度快、资源占用低）。
 2. **L2 (高级抓取)**：若 L1 返回"环境异常"、"验证码"或内容明显不正确，尝试 `research_jina_reader`。
-3. **L3 (本地浏览器)**：若 L2 仍失败，可尝试 `research_local_scraper`（适合微信公众号等强反爬场景，但延迟较高）。
-4. **L4 (搜索兜底)**：若所有抓取均失败，使用 `web_search` 搜索目标 URL，获取快照摘要。
+3. **L3 (本地浏览器专用抓取)**：若 L2 仍失败，可尝试 `research_local_scraper`（适合微信公众号等强反爬场景，但延迟较高）。
+4. **L3.5 (本地浏览器通用访问)**：需要等待特定元素、复用登录 Cookie 或截图时，使用 `browser_browse`。
+5. **L4 (搜索兜底)**：若所有抓取均失败，使用 `web_search` 搜索目标 URL，获取快照摘要。
 
 ## 注意事项
 1. **Token 消耗**：由于这些工具往往返回大量文本，建议配合具备长上下文处理能力的模型（如 DeepSeek, Qwen）。

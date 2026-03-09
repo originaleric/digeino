@@ -133,6 +133,20 @@ type ToolsConfig struct {
 	Unstructured UnstructuredConfig `yaml:"Unstructured" json:"Unstructured"`
 	Pinecone     PineconeConfig     `yaml:"Pinecone" json:"Pinecone"`
 	Embedding    EmbeddingConfig    `yaml:"Embedding" json:"Embedding"`
+	LocalBrowser LocalBrowserConfig `yaml:"LocalBrowser" json:"LocalBrowser"`
+}
+
+// LocalBrowserConfig 本地浏览器抓取配置
+type LocalBrowserConfig struct {
+	Enabled                *bool    `yaml:"Enabled" json:"Enabled,omitempty"`
+	MaxConcurrency         int      `yaml:"MaxConcurrency" json:"MaxConcurrency"`
+	TotalTimeoutSec        int      `yaml:"TotalTimeoutSec" json:"TotalTimeoutSec"`
+	NavigateTimeoutSec     int      `yaml:"NavigateTimeoutSec" json:"NavigateTimeoutSec"`
+	WaitSelectorTimeoutSec int      `yaml:"WaitSelectorTimeoutSec" json:"WaitSelectorTimeoutSec"`
+	AllowedDomains         []string `yaml:"AllowedDomains" json:"AllowedDomains"`
+	ChromePath             string   `yaml:"ChromePath" json:"ChromePath"`
+	Headless               *bool    `yaml:"Headless" json:"Headless,omitempty"`
+	CookieStoreDir         string   `yaml:"CookieStoreDir" json:"CookieStoreDir"`
 }
 
 // FirecrawlConfig Firecrawl 深度爬取配置
@@ -253,6 +267,7 @@ func Set(cfg *Config) {
 // Default 返回默认配置
 func Default() *Config {
 	enabled := true
+	disabled := false
 	wechatDisabled := false
 	dataFlowDisabled := false
 	return &Config{
@@ -343,6 +358,17 @@ func Default() *Config {
 				Model:      "text-embedding-v2",
 				Dimensions: 1024,
 				BaseUrl:    "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			},
+			LocalBrowser: LocalBrowserConfig{
+				Enabled:                &disabled,
+				MaxConcurrency:         3,
+				TotalTimeoutSec:        60,
+				NavigateTimeoutSec:     30,
+				WaitSelectorTimeoutSec: 20,
+				AllowedDomains:         []string{},
+				ChromePath:             "",
+				Headless:               &enabled,
+				CookieStoreDir:         "storage/app/browser_cookies",
 			},
 		},
 	}

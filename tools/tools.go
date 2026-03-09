@@ -155,6 +155,11 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, localScraperTool)
 	}
+	// 5.1 本地浏览器通用抓取工具（read/screenshot + cookie 复用）
+	browserBrowseTool, err := research.NewBrowserBrowseTool(ctx)
+	if err == nil {
+		tools = append(tools, browserBrowseTool)
+	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil

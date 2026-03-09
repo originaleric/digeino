@@ -106,3 +106,13 @@ Tools:
     BaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1"
     Model: "text-embedding-v2"
     Dimensions: 1024
+  LocalBrowser:
+    Enabled: false
+    MaxConcurrency: 3
+    TotalTimeoutSec: 60
+    NavigateTimeoutSec: 30
+    WaitSelectorTimeoutSec: 20
+    AllowedDomains: [] # 为空表示不限制；生产环境建议显式配置白名单
+    ChromePath: "" # 可选：自定义 Chromium 可执行文件路径
+    Headless: true
+    CookieStoreDir: "storage/app/browser_cookies"
