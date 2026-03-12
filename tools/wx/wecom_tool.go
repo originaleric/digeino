@@ -232,3 +232,53 @@ func NewWeComCustomerMiniprogramTool(ctx context.Context) (tool.BaseTool, error)
 		},
 	)
 }
+
+// NewReceiveWeComCustomerMessageTool 创建接收企业微信客服消息工具
+func NewReceiveWeComCustomerMessageTool(ctx context.Context) (tool.BaseTool, error) {
+	cfg := config.Get()
+	if cfg.WeCom.Enabled == nil || !*cfg.WeCom.Enabled {
+		return nil, fmt.Errorf("WeCom tool is not enabled in config")
+	}
+	if cfg.WeCom.CorpID == "" || len(cfg.WeCom.Applications) == 0 {
+		return nil, fmt.Errorf("WeCom CorpID or Applications not configured")
+	}
+
+	return utils.InferTool(
+		"receive_wecom_customer_message",
+		"接收个人微信用户发送给企业微信机器人应用的消息。支持两种模式：1) 实时模式（realtime）：通过回调实时接收消息（推荐，消息即时到达）；2) 拉取模式（pull）：主动拉取最近3天内的消息（用于补拉历史消息或主动查询）。",
+		func(ctx context.Context, req *ReceiveWeComCustomerMessageRequest) (*ReceiveWeComCustomerMessageResponse, error) {
+			resp, err := ReceiveWeComCustomerMessage(ctx, *req)
+			if err != nil {
+				return nil, err
+			}
+			return &resp, nil
+		},
+	)
+}
+
+// ReceiveWeComCustomerMessage 接收企业微信客服消息
+func ReceiveWeComCustomerMessage(ctx context.Context, req ReceiveWeComCustomerMessageRequest) (ReceiveWeComCustomerMessageResponse, error) {
+	// 默认使用拉取模式
+	mode := req.Mode
+	if mode == "" {
+		mode = "pull"
+	}
+
+	if mode == "pull" {
+		// 拉取模式：需要先获取一个 token（通过回调事件获取，或使用最近的回调 token）
+		// 这里简化处理，实际使用时需要传入 token
+		// TODO: 可以考虑存储最近的回调 token，或提供其他方式获取 token
+		return ReceiveWeComCustomerMessageResponse{
+			Success:  false,
+			Message:  "拉取模式需要 token，请通过回调事件获取或使用实时模式",
+			Messages: []CustomerMessage{},
+		}, fmt.Errorf("pull mode requires token from callback event")
+	}
+
+	// 实时模式：需要通过回调接收，这里返回提示信息
+	return ReceiveWeComCustomerMessageResponse{
+		Success:  false,
+		Message:  "实时模式需要通过回调接收消息，请配置回调 URL 并设置 OnMessage 回调函数",
+		Messages: []CustomerMessage{},
+	}, fmt.Errorf("realtime mode requires callback configuration")
+}

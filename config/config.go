@@ -93,11 +93,21 @@ type MiniProgramConfig struct {
 
 // WeComConfig 企业微信配置
 type WeComConfig struct {
-	Enabled       *bool              `yaml:"Enabled" json:"Enabled,omitempty"`
-	CorpID        string             `yaml:"CorpID" json:"CorpID,omitempty"`
-	QYAPIHost     string             `yaml:"QYAPIHost" json:"QYAPIHost,omitempty"`
-	TokenFilePath string             `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"`
-	Applications  []WeComApplication `yaml:"Applications" json:"Applications,omitempty"`
+	Enabled       *bool                 `yaml:"Enabled" json:"Enabled,omitempty"`
+	CorpID        string                `yaml:"CorpID" json:"CorpID,omitempty"`
+	QYAPIHost     string                `yaml:"QYAPIHost" json:"QYAPIHost,omitempty"`
+	TokenFilePath string                `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"`
+	Callback      WeComCallbackConfig   `yaml:"Callback" json:"Callback,omitempty"`
+	Applications  []WeComApplication    `yaml:"Applications" json:"Applications,omitempty"`
+}
+
+// WeComCallbackConfig 企业微信客服回调配置
+type WeComCallbackConfig struct {
+	Enabled       *bool  `yaml:"Enabled" json:"Enabled,omitempty"`             // 是否启用回调接收消息功能
+	URL           string `yaml:"URL" json:"URL,omitempty"`                    // 回调 URL（如：https://your-domain.com/api/v1/wecom/callback）
+	Token         string `yaml:"Token" json:"Token,omitempty"`                 // 回调 Token（企业微信管理后台配置）
+	EncodingAESKey string `yaml:"EncodingAESKey" json:"EncodingAESKey,omitempty"` // 回调消息加密密钥（企业微信管理后台配置）
+	Path          string `yaml:"Path" json:"Path,omitempty"`                   // 回调路径（相对路径，用于路由注册）
 }
 
 // WeComApplication 企业微信应用配置

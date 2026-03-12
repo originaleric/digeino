@@ -157,3 +157,52 @@ Tools:
 - 结合机器内存设置 `MaxConcurrency`（通常 3~5）。
 - Linux/CentOS 场景确保安装 Chromium 依赖和中文字体。
 - 长期运行建议配合服务级监控观察内存与浏览器进程数量。
+
+## 9. CentOS 部署安装指令
+
+以下命令适用于常见 CentOS 7/8 环境，用于准备 `browser_browse` 所需运行依赖。
+
+### 9.1 安装 Chromium 运行库
+
+```bash
+sudo yum install -y \
+  libX11 \
+  libXcomposite \
+  libXdamage \
+  libXext \
+  libXfixes \
+  libXi \
+  libXtst \
+  atk \
+  atk-devel \
+  gtk3 \
+  cups-libs \
+  pango \
+  alsa-lib \
+  nss \
+  nspr \
+  libdrm \
+  mesa-libgbm \
+  xorg-x11-fonts-Type1 \
+  xorg-x11-utils
+```
+
+### 9.2 安装中文字体（避免截图/渲染乱码）
+
+```bash
+sudo yum install -y google-noto-cjk-fonts
+# 若仓库无该包，可尝试：
+# sudo yum install -y wqy-microhei-fonts wqy-zenhei-fonts
+```
+
+### 9.3 字体缓存刷新
+
+```bash
+sudo fc-cache -f -v
+```
+
+### 9.4 运行参数建议
+
+- CentOS 服务器建议保留 `no-sandbox` 和 `disable-gpu`（已在工具实现中使用）。
+- 建议 `Headless: true`，并将 `MaxConcurrency` 控制在 `3~5`。
+- 若服务器有预装 Chromium，可通过 `ChromePath` 显式指定路径，减少首次拉起耗时。

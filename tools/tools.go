@@ -111,6 +111,11 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, wecomCustomerMiniprogramTool)
 	}
+	// 3.1. 接收企业微信客服消息工具（如果已启用回调功能）
+	receiveWeComCustomerTool, err := wx.NewReceiveWeComCustomerMessageTool(ctx)
+	if err == nil {
+		tools = append(tools, receiveWeComCustomerTool)
+	}
 
 	// 4. 通用调研系列工具
 	grepTool, err := research.NewGrepSearchTool(ctx)

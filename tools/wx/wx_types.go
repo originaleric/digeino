@@ -274,3 +274,142 @@ type SendWeComCustomerMiniprogramResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
+
+// --- 企业微信客服回调接收消息相关类型 ---
+
+// WeComCallbackEvent 企业微信客服回调事件
+type WeComCallbackEvent struct {
+	ToUserName string `json:"ToUserName" xml:"ToUserName"` // 企业微信CorpID
+	CreateTime int64  `json:"CreateTime" xml:"CreateTime"` // 消息创建时间
+	MsgType    string `json:"MsgType" xml:"MsgType"`       // 固定为 "event"
+	Event      string `json:"Event" xml:"Event"`           // 固定为 "kf_msg_or_event"
+	Token      string `json:"Token" xml:"Token"`           // 用于拉取消息的token
+	OpenKfId   string `json:"OpenKfId" xml:"OpenKfId"`     // 客服账号ID
+}
+
+// SyncMessageRequest 拉取消息请求
+type SyncMessageRequest struct {
+	Token  string `json:"token"`  // 回调事件中的Token
+	Limit  int    `json:"limit"`  // 可选，默认1000
+	Cursor string `json:"cursor"` // 可选，用于分页
+}
+
+// SyncMessageResponse 拉取消息响应
+type SyncMessageResponse struct {
+	ErrCode    int              `json:"errcode"`
+	ErrMsg     string           `json:"errmsg"`
+	NextCursor string           `json:"next_cursor"` // 下次拉取的游标
+	HasMore    int              `json:"has_more"`    // 是否还有更多消息（0=没有，1=有）
+	MsgList    []CustomerMessage `json:"msg_list"`   // 消息列表
+}
+
+// CustomerMessage 客服消息
+type CustomerMessage struct {
+	MsgID          string       `json:"msgid"`           // 消息ID
+	OpenKfId       string       `json:"open_kfid"`      // 客服账号ID
+	ExternalUserID string       `json:"external_userid"` // 外部联系人ID（客户）
+	SendTime       int64        `json:"send_time"`       // 发送时间
+	Origin         int          `json:"origin"`         // 消息来源（3=客户发送）
+	ServicerUserID string       `json:"servicer_userid,omitempty"` // 客服userid（可选）
+	MsgType        string       `json:"msgtype"`        // 消息类型：text, image, voice, video, file, location, link, business_card, miniprogram, msgmenu, event
+	Text           *TextMessage `json:"text,omitempty"`
+	Image          *MediaMessage `json:"image,omitempty"`
+	Voice          *MediaMessage `json:"voice,omitempty"`
+	Video          *MediaMessage `json:"video,omitempty"`
+	File           *MediaMessage `json:"file,omitempty"`
+	Location       *LocationMessage `json:"location,omitempty"`
+	Link           *LinkMessage `json:"link,omitempty"`
+	BusinessCard   *BusinessCardMessage `json:"business_card,omitempty"`
+	Miniprogram    *MiniprogramMessage `json:"miniprogram,omitempty"`
+	MsgMenu        *MsgMenuMessage `json:"msgmenu,omitempty"`
+	Event          *EventMessage `json:"event,omitempty"`
+}
+
+// TextMessage 文本消息
+type TextMessage struct {
+	Content string `json:"content"` // 消息内容
+	MenuID  string `json:"menu_id,omitempty"` // 菜单ID（可选）
+}
+
+// MediaMessage 媒体消息（图片、语音、视频、文件）
+type MediaMessage struct {
+	MediaID string `json:"media_id"` // 媒体ID
+}
+
+// LocationMessage 位置消息
+type LocationMessage struct {
+	Latitude  float64 `json:"latitude"`  // 纬度
+	Longitude float64 `json:"longitude"` // 经度
+	Name      string  `json:"name"`      // 位置名称
+	Address   string  `json:"address"`   // 地址
+}
+
+// LinkMessage 链接消息
+type LinkMessage struct {
+	Title       string `json:"title"`        // 标题
+	Desc        string `json:"desc"`         // 描述
+	URL         string `json:"url"`          // 链接
+	ThumbMediaID string `json:"thumb_media_id"` // 封面图media_id
+}
+
+// BusinessCardMessage 名片消息
+type BusinessCardMessage struct {
+	UserID string `json:"userid"` // 用户ID
+}
+
+// MiniprogramMessage 小程序消息
+type MiniprogramMessage struct {
+	Title        string `json:"title"`         // 标题
+	AppID        string `json:"appid"`         // 小程序appid
+	PagePath     string `json:"pagepath"`      // 页面路径
+	ThumbMediaID string `json:"thumb_media_id"` // 封面图media_id
+}
+
+// MsgMenuMessage 菜单消息
+type MsgMenuMessage struct {
+	HeadContent string        `json:"head_content"` // 头部内容
+	List        []MsgMenuItem `json:"list"`         // 菜单项列表
+	TailContent string        `json:"tail_content"` // 尾部内容
+}
+
+// MsgMenuItem 菜单项
+type MsgMenuItem struct {
+	Type  string `json:"type"`  // 类型：click, view, miniprogram
+	Click *struct {
+		ID      string `json:"id"`      // 菜单ID
+		Content string `json:"content"` // 菜单内容
+	} `json:"click,omitempty"`
+	View *struct {
+		URL     string `json:"url"`     // 跳转URL
+		Content string `json:"content"` // 菜单内容
+	} `json:"view,omitempty"`
+	Miniprogram *struct {
+		AppID    string `json:"appid"`    // 小程序appid
+		PagePath string `json:"pagepath"` // 页面路径
+		Content  string `json:"content"`  // 菜单内容
+	} `json:"miniprogram,omitempty"`
+}
+
+// EventMessage 事件消息
+type EventMessage struct {
+	EventType string `json:"event_type"` // 事件类型
+	// 根据事件类型不同，可能有不同的字段
+}
+
+// ReceiveWeComCustomerMessageRequest 接收消息工具请求（供外部系统调用）
+type ReceiveWeComCustomerMessageRequest struct {
+	OpenKfID      string `json:"open_kf_id" jsonschema:"description=可选：客服账号ID，不传则拉取所有"`
+	ExternalUserID string `json:"external_userid" jsonschema:"description=可选：外部联系人ID，不传则拉取所有"`
+	Limit         int    `json:"limit" jsonschema:"description=可选：拉取数量，默认1000（仅拉取模式有效）"`
+	Cursor        string `json:"cursor" jsonschema:"description=可选：游标，用于分页（仅拉取模式有效）"`
+	Mode          string `json:"mode" jsonschema:"description=可选：realtime（实时回调，默认）或 pull（主动拉取）"`
+}
+
+// ReceiveWeComCustomerMessageResponse 接收消息工具响应
+type ReceiveWeComCustomerMessageResponse struct {
+	Success    bool             `json:"success"`
+	Message    string           `json:"message"`
+	Messages   []CustomerMessage `json:"messages"`   // 接收到的消息列表
+	NextCursor string           `json:"next_cursor"` // 下次拉取的游标
+	HasMore    bool             `json:"has_more"`    // 是否还有更多消息
+}

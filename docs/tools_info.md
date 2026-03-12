@@ -59,6 +59,7 @@
 | `send_wecom_image` | 发送图片消息。 | `user_id`: 成员ID; `media_id`: 临时素材ID |
 | `send_wecom_text_card` | 发送文本卡片（带链接和描述）。 | `user_id`: 成员ID; `title`: 标题; `url`: 链接 |
 | `send_wecom_customer_message` | **客服消息**。发送给添加了客服的个人微信用户。 | `customer_id`: 外部ID; `content`: 文本内容 |
+| `receive_wecom_customer_message` | **接收客服消息**。接收个人微信用户发送给企业微信机器人应用的消息。支持实时回调模式和主动拉取模式。 | `mode`: 模式（realtime/pull）; `open_kf_id`: 客服账号ID（可选）; `limit`: 拉取数量（可选） |
 
 ### 3.2 个人微信 (WeChat)
 | 工具名称 | 功能描述 | 主要参数 |

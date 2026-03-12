@@ -39,6 +39,12 @@ WeCom:
   CorpID: ""                        # 企业微信 CorpID（我的企业 > 企业信息）
   QYAPIHost: "https://qyapi.weixin.qq.com"  # 企业微信 API 地址（可选，支持自定义域名）
   TokenFilePath: "storage/app/wecom/access_token.json"
+  Callback:                         # 客服回调配置（用于接收个人微信用户发送的消息）
+    Enabled: false                  # 是否启用回调接收消息功能
+    URL: ""                         # 回调 URL（如：https://your-domain.com/api/v1/wecom/callback）
+    Token: ""                       # 回调 Token（企业微信管理后台配置）
+    EncodingAESKey: ""             # 回调消息加密密钥（企业微信管理后台配置，43位Base64编码）
+    Path: "/api/v1/wecom/callback" # 回调路径（相对路径，用于路由注册）
   Applications:
     - AgentID: 0                    # 企业微信应用 ID（应用管理 > 自建应用）
       AgentSecret: ""               # 应用 Secret
