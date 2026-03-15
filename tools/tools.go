@@ -165,6 +165,16 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, browserBrowseTool)
 	}
+	// 5.2 浏览器快照工具（结构化快照，提取可交互元素）
+	browserSnapshotTool, err := research.NewBrowserSnapshotTool(ctx)
+	if err == nil {
+		tools = append(tools, browserSnapshotTool)
+	}
+	// 5.3 浏览器操作工具（点击、输入、悬停、滚动等交互操作）
+	browserActionTool, err := research.NewBrowserActionTool(ctx)
+	if err == nil {
+		tools = append(tools, browserActionTool)
+	}
 
 	// 这里未来可以放入通用的 Google 搜索、计算器等跨项目工具
 	return tools, nil

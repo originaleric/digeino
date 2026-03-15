@@ -31,6 +31,9 @@ type browserManager struct {
 	stopCh     chan struct{}
 	stopOnce   sync.Once
 	cleanupRun sync.Once
+	// 新增：标签页管理
+	tabManager *TabManager
+	tabExecutor *TabExecutor
 }
 
 var (
@@ -41,15 +44,39 @@ var (
 func getBrowserManager() *browserManager {
 	browserManagerOnce.Do(func() {
 		cfg := normalizeLocalBrowserConfig(config.Get().Tools.LocalBrowser)
+		executor := NewTabExecutor(cfg.MaxConcurrency)
 		globalBrowserMgr = &browserManager{
-			cfg:      cfg,
-			slots:    make(chan struct{}, cfg.MaxConcurrency),
-			sessions: make(map[uint64]*browserSession),
-			stopCh:   make(chan struct{}),
+			cfg:         cfg,
+			slots:       make(chan struct{}, cfg.MaxConcurrency),
+			sessions:    make(map[uint64]*browserSession),
+			stopCh:      make(chan struct{}),
+			tabExecutor: executor,
 		}
 		globalBrowserMgr.startCleanupLoop()
 	})
 	return globalBrowserMgr
+}
+
+// getTabManager 获取或创建标签页管理器
+func (m *browserManager) getTabManager() (*TabManager, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.tabManager != nil {
+		return m.tabManager, nil
+	}
+
+	// 确保浏览器已初始化
+	ctx := context.Background()
+	browser, err := m.ensureBrowser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建标签页管理器
+	tabTTL := time.Duration(m.cfg.TotalTimeoutSec*2) * time.Second
+	m.tabManager = NewTabManager(browser, m.tabExecutor, m.cfg.MaxConcurrency*2, tabTTL)
+	return m.tabManager, nil
 }
 
 func normalizeLocalBrowserConfig(cfg config.LocalBrowserConfig) config.LocalBrowserConfig {
