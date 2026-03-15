@@ -64,6 +64,30 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 		tools = append(tools, persistTool)
 	}
 
+	// 1.3. UI/UX 技术质量审查工具
+	auditTool, err := ui_ux.NewUIUXAuditTool(ctx)
+	if err == nil {
+		tools = append(tools, auditTool)
+	}
+
+	// 1.4. UI/UX 设计审查工具
+	critiqueTool, err := ui_ux.NewUIUXCritiqueTool(ctx)
+	if err == nil {
+		tools = append(tools, critiqueTool)
+	}
+
+	// 1.5. UI/UX 设计系统标准化工具
+	normalizeTool, err := ui_ux.NewUIUXNormalizeTool(ctx)
+	if err == nil {
+		tools = append(tools, normalizeTool)
+	}
+
+	// 1.6. UI/UX 参考文档检索工具
+	referenceTool, err := ui_ux.NewUIUXReferenceTool(ctx)
+	if err == nil {
+		tools = append(tools, referenceTool)
+	}
+
 	// 2. 微信推送工具（如果已启用）
 	wxTool, err := wx.NewWeChatMessageTool(ctx)
 	if err == nil {

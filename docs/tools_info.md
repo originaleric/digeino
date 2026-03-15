@@ -161,11 +161,38 @@
 
 基于 AI 的设计知识库检索与设计系统自动生成工具。
 
+### 2.1 设计知识库检索与生成
+
 | 工具名称 | 功能描述 | 主要参数 |
 | :--- | :--- | :--- |
 | `ui_ux_search` | 检索 UI/UX 知识库（样式、配色、字体、交互、落地页模式等）。 | `query`: 检索词; `stack`: 技术栈(如 tailwind) |
 | `generate_design_system` | 为特定产品需求生成完整的 UI/UX 设计系统。 | `query`: 需求描述; `project_name`: 项目名 |
 | `persist_design_system` | 将生成的设计系统持久化为 `MASTER.md` 及页面覆盖文件。 | `project_name`: 项目名; `page_name`: 页面名 |
+
+### 2.2 代码审查与标准化工具
+
+| 工具名称 | 功能描述 | 主要参数 |
+| :--- | :--- | :--- |
+| `ui_ux_audit` | 技术质量审查工具。对前端代码进行全面的技术质量审查，包括可访问性、性能、主题、响应式设计和反模式检测。生成详细的审查报告，包含问题位置、严重程度和修复建议。 | `path`: 要审查的文件或目录路径（必填）; `area`: 要审查的特定区域/功能（可选）; `severity_filter`: 严重程度过滤（可选） |
+| `ui_ux_critique` | UX 设计审查工具。从 UX 设计角度评估界面效果，包括 AI Slop 检测、视觉层次、信息架构、情感共鸣等。提供设计改进建议和优先级排序。 | `path`: 要审查的文件或目录路径（必填）; `area`: 要审查的特定区域/功能（可选）; `focus`: 重点关注领域（可选，如 visual-hierarchy, color-usage） |
+| `ui_ux_normalize` | 设计系统标准化工具。分析代码与设计系统的偏差，生成标准化计划并执行标准化。确保代码使用设计令牌、统一组件和模式。 | `path`: 要标准化的文件或目录路径（必填）; `feature`: 要标准化的特定功能/页面（可选）; `design_system_path`: 设计系统文档路径（可选，自动发现）; `dry_run`: 仅生成计划，不执行修改（可选，默认 false） |
+| `ui_ux_reference` | 参考文档检索工具。检索 UI/UX 设计参考文档，包括排版(typography)、颜色与对比度(color)、空间设计(spatial)、动效设计(motion)、交互设计(interaction)、响应式设计(responsive)、UX 文案(ux_writing)等领域的最佳实践和反模式。 | `domain`: 参考文档领域（必填，可选值: typography, color, spatial, motion, interaction, responsive, ux_writing）; `query`: 检索关键词（可选）; `max_results`: 最大返回结果数（可选，默认 5） |
+
+**使用方式**：
+
+这些工具通过 LLM Agent 使用。用户通过自然语言告诉 Agent 要审查或标准化的内容，Agent 会自动调用相应的工具。
+
+**示例**：
+
+```
+用户：请审查 components/Header.tsx 的代码质量
+Agent：[自动调用 ui_ux_audit 工具]
+Agent：审查完成，发现 3 个问题：
+1. [Critical] 使用 Inter 字体（过度使用的字体）
+   位置：Header.tsx:45
+   建议：使用 Instrument Sans 或 Plus Jakarta Sans
+   ...
+```
 
 ---
 

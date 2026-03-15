@@ -10,6 +10,13 @@
 - **`generate_design_system`**: 生成完整设计系统（包含推理引擎）
 - **`persist_design_system`**: 持久化设计系统到文件（Master + Overrides 模式）
 
+### 2. 审查与标准化工具
+
+- **`ui_ux_audit`**: 技术质量审查工具（可访问性、性能、主题、响应式、反模式）
+- **`ui_ux_critique`**: UX 设计审查工具（AI Slop 检测、视觉层次、信息架构等）
+- **`ui_ux_normalize`**: 设计系统标准化工具
+- **`ui_ux_reference`**: 参考文档检索工具（7 个领域的最佳实践）
+
 ### 2. Agent 编排
 
 - **`UIDesignSystemAgent`**: 智能编排的 Agent，自动完成设计系统生成工作流

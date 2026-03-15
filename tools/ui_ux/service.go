@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-//go:embed data/*.csv data/stacks/*.csv
+//go:embed data/*.csv data/stacks/*.csv data/reference/*.csv
 var designData embed.FS
 
 // CSVConfigEntry defines the configuration for each design domain
@@ -61,6 +61,42 @@ var CSVConfigs = map[string]CSVConfigEntry{
 		SearchCols: []string{"Font Pairing Name", "Category", "Mood/Style Keywords", "Best For", "Heading Font", "Body Font"},
 		OutputCols: []string{"Font Pairing Name", "Category", "Heading Font", "Body Font", "Mood/Style Keywords", "Best For", "Google Fonts URL", "CSS Import", "Tailwind Config", "Notes"},
 	},
+	// 参考文档配置
+	"reference_typography": {
+		File:       "data/reference/typography.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
+	"reference_color": {
+		File:       "data/reference/color_and_contrast.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
+	"reference_spatial": {
+		File:       "data/reference/spatial_design.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
+	"reference_motion": {
+		File:       "data/reference/motion_design.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
+	"reference_interaction": {
+		File:       "data/reference/interaction_design.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
+	"reference_responsive": {
+		File:       "data/reference/responsive_design.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
+	"reference_ux_writing": {
+		File:       "data/reference/ux_writing.csv",
+		SearchCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Keywords"},
+		OutputCols: []string{"Category", "Topic", "Description", "Do", "Don't", "Code Example Good", "Code Example Bad", "Severity"},
+	},
 }
 
 // StackConfigs maps technology stacks to their respective CSV files
@@ -92,6 +128,11 @@ type UIUXService struct{}
 // NewUIUXService creates a new UIUXService using embedded data
 func NewUIUXService() *UIUXService {
 	return &UIUXService{}
+}
+
+// LoadCSV loads CSV data from embedded files (public method for use by other tools)
+func (s *UIUXService) LoadCSV(filename string) ([]map[string]string, error) {
+	return s.loadCSV(filename)
 }
 
 func (s *UIUXService) loadCSV(filename string) ([]map[string]string, error) {
