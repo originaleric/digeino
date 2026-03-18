@@ -8,6 +8,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/originaleric/digeino/tools/research"
 	"github.com/originaleric/digeino/tools/research/websearch"
+	"github.com/originaleric/digeino/tools/storage"
 	"github.com/originaleric/digeino/tools/ui_ux"
 	"github.com/originaleric/digeino/tools/wx"
 )
@@ -86,6 +87,12 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	referenceTool, err := ui_ux.NewUIUXReferenceTool(ctx)
 	if err == nil {
 		tools = append(tools, referenceTool)
+	}
+
+	// 1.7. 临时存储工具（供 audit/critique 使用，需 context 注入 workspace_path 或 agent_session_id）
+	writeReviewFileTool, err := storage.NewWriteReviewFileTool(ctx)
+	if err == nil {
+		tools = append(tools, writeReviewFileTool)
 	}
 
 	// 2. 微信推送工具（如果已启用）

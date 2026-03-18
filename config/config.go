@@ -125,7 +125,8 @@ type ChatModelConfig struct {
 
 // UIUXConfig UI/UX 工具配置
 type UIUXConfig struct {
-	Storage UIUXStorageConfig `yaml:"Storage" json:"Storage"`
+	Storage     UIUXStorageConfig     `yaml:"Storage" json:"Storage"`
+	TempStorage TempStorageConfig     `yaml:"TempStorage" json:"TempStorage"`
 }
 
 // UIUXStorageConfig UI/UX 存储配置
@@ -134,6 +135,11 @@ type UIUXStorageConfig struct {
 	// 如果不同应用/agent 需要隔离，可以在调用时传入 AppName
 	// 存储路径为: {BaseDir}/{app-name}/design-system/{project}/MASTER.md
 	// 如果未指定 app-name，则为: {BaseDir}/design-system/{project}/MASTER.md
+}
+
+// TempStorageConfig 临时存储配置（供 audit/critique 等工具使用）
+type TempStorageConfig struct {
+	BaseDir string `yaml:"BaseDir" json:"BaseDir"` // 会话模式下的临时根目录，默认为 "storage/temp"
 }
 
 // ToolsConfig 工具配置集
@@ -326,6 +332,9 @@ func Default() *Config {
 		UIUX: UIUXConfig{
 			Storage: UIUXStorageConfig{
 				BaseDir: "storage/app/ui_ux",
+			},
+			TempStorage: TempStorageConfig{
+				BaseDir: "storage/temp",
 			},
 		},
 		Tools: ToolsConfig{

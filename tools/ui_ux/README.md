@@ -327,6 +327,72 @@ result, _ := persistTool.Invoke(ctx, &ui_ux.PersistDesignSystemRequest{
 
 ## 配置说明
 
+### UI/UX 临时文件与工作空间集成
+
+除了上述「设计系统持久化」到 `storage/app/ui_ux` 之外，DigEino 提供**统一的临时存储能力**（`write_review_file` 工具 + `tempstorage.SaveForReview` API），供 `ui_ux_audit` / `ui_ux_critique` 审查一次性生成的 CSS/HTML/代码。引用方只需在调用时注入 Context，无需各自实现存储逻辑。
+
+#### 1. Context 键与配置
+
+**Context 键约定**（与 DigFlow 兼容）：
+
+| 键名 | 模式 | 说明 |
+|------|------|------|
+| `workspace_path` | 工作空间 | DigFlow 已在使用，每次执行注入 workspace 根路径 |
+| `agent_session_id` | 会话 | DigPdf 等应用在调用 Agent 前注入 sessionID |
+
+**配置项**（`config.yaml`）：
+
+```yaml
+UIUX:
+  TempStorage:
+    BaseDir: "storage/temp"   # 会话模式下的临时根目录，默认 storage/temp
+```
+
+- `BaseDir` 支持相对路径（相对于进程 cwd）或绝对路径
+- 会话模式：`{BaseDir}/agent/{session_id}/{filename}`
+
+**程序化 API**（供 DigPdf 等应用在代码中调用）：
+
+```go
+import "github.com/originaleric/digeino/pkg/tempstorage"
+
+path, err := tempstorage.SaveForReview(ctx, "designer_output.css", cssContent)
+// 返回绝对路径，可传入 ui_ux_audit / ui_ux_critique
+```
+
+**LLM 工具**：`write_review_file`（已通过 `tools.BaseTools()` 注册）
+
+- 参数：`filename`（必填）、`content`（必填）
+- 行为：根据 context 注入的 `workspace_path` 或 `agent_session_id` 写入文件，返回绝对路径
+- 与 `ui_ux_audit`、`ui_ux_critique` 配合：先调用 `write_review_file` 得到 path，再传入审查工具
+
+#### 2. 上层应用的典型集成方式
+
+- **DigPdf**：
+  - 在调用 Agent 的 context 中注入：`ctx = context.WithValue(ctx, "agent_session_id", sessionID)`
+  - 程序化写入：在 Designer/Assembler 节点中调用 `tempstorage.SaveForReview(ctx, filename, content)` 替代自有的 `saveAgentTempFile`
+  - LLM 审查：若需模型自行写入再审查，可调用 `write_review_file` 得到 path 后传给 audit/critique
+  - `ui_ux_reference` 仍然是**纯检索工具**，无需路径参数
+
+- **DigFlow（UI Pro）**：
+  - 已注入 `workspace_path`，无需改动
+  - 可选择 DigEino 的 `write_review_file` 替代自有的 `write_file`（仅针对审查流程），或保留现有 `write_file`，两种方式均可工作
+
+#### 3. 各工具在临时/持久存储下的推荐用法
+
+| 工具 | 是否需要 path | 典型用法 |
+|------|---------------|----------|
+| `ui_ux_reference` | 否 | 在 DigPdf、DigFlow 等应用中直接调用，用于检索 typography/color/spatial/motion/interaction/responsive/ux_writing 等领域的参考文档 |
+| `write_review_file` | 否（从 context 解析） | 将内容写入临时/工作空间，返回 path，供 audit/critique 使用 |
+| `ui_ux_audit` | 是（必填） | 将生成的 CSS/HTML/代码写入临时文件或 workspace，再将路径传入，做技术质量审查（可访问性、性能、主题、响应式等） |
+| `ui_ux_critique` | 是（必填） | 同上，用于 UX 设计层面的审查（视觉层次、信息架构、交互流等） |
+| `ui_ux_normalize` | 是（必填） | 更适合与已经持久化的设计系统文件配合，做长期资产的标准化；对一次性临时输出的收益相对较低 |
+
+综合来看：
+
+- 推荐将 **设计系统本身** 通过 `persist_design_system` 持久化到 `storage/app/ui_ux(...)/design-system/**`。
+- 将 **具体页面实现/组件代码/一次性输出** 通过 `write_review_file` 或 `tempstorage.SaveForReview` 写入，再传入 `ui_ux_audit` / `ui_ux_critique` 审查。
+
 ### UI/UX 存储配置
 
 在 `config/config.yaml` 中配置存储路径：
@@ -341,6 +407,8 @@ UIUX:
     # 示例：
     # - AppName="travel": storage/app/ui_ux/travel/design-system/my-project/MASTER.md
     # - 未指定: storage/app/ui_ux/design-system/my-project/MASTER.md
+  TempStorage:
+    BaseDir: "storage/temp"          # 临时存储根目录（供 audit/critique 使用，会话模式）
 ```
 
 **存储路径优先级**：
