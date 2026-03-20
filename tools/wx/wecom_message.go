@@ -76,6 +76,44 @@ func sendWeComMessageAPI(ctx context.Context, accessToken string, agentID int64,
 	return nil
 }
 
+const maxMsgOnEventTextBytes = 2048 // send_msg_on_event 文本消息最长 2048 字节，code 仅一次有效，不建议分条
+
+// sendWeComMsgOnEventAPI 调用 send_msg_on_event 接口（发送客服欢迎语）
+func sendWeComMsgOnEventAPI(ctx context.Context, accessToken string, body map[string]interface{}) (string, error) {
+	url := fmt.Sprintf("%s/cgi-bin/kf/send_msg_on_event?access_token=%s", getWeComAPIHost(), accessToken)
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("marshal request: %w", err)
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("call WeCom API: %w", err)
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read response: %w", err)
+	}
+	var apiResp struct {
+		ErrCode int    `json:"errcode"`
+		ErrMsg  string `json:"errmsg"`
+		MsgID   string `json:"msgid"`
+	}
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return "", fmt.Errorf("parse response: %w", err)
+	}
+	if apiResp.ErrCode != 0 {
+		return "", fmt.Errorf("WeCom API errcode=%d errmsg=%s", apiResp.ErrCode, apiResp.ErrMsg)
+	}
+	return apiResp.MsgID, nil
+}
+
 // sendWeComCustomerMessageAPI 直接调用企业微信客服 API 发送消息（用于第三方传入 token）
 func sendWeComCustomerMessageAPI(ctx context.Context, accessToken string, openKfID string, customerID string, body map[string]interface{}) error {
 	url := fmt.Sprintf("%s/cgi-bin/kf/send_msg?access_token=%s", getWeComAPIHost(), accessToken)
@@ -460,6 +498,45 @@ func SendWeComCustomerMessage(ctx context.Context, req SendWeComCustomerMessageR
 		return SendWeComCustomerMessageResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
 	}
 	return SendWeComCustomerMessageResponse{Success: true, Message: "客服消息发送成功"}, nil
+}
+
+// SendWeComMsgOnEvent 发送客服欢迎语（事件响应消息）
+// 见 https://kf.weixin.qq.com/api/doc/path/95123
+// 用于「进入会话」等事件，code 来自 sync_msg 的 event.welcome_code，收到事件后 20 秒内有效，仅可调用一次
+func SendWeComMsgOnEvent(ctx context.Context, req SendWeComMsgOnEventRequest) (SendWeComMsgOnEventResponse, error) {
+	if req.Code == "" {
+		return SendWeComMsgOnEventResponse{}, fmt.Errorf("code is required")
+	}
+	if req.Content == "" {
+		return SendWeComMsgOnEventResponse{}, fmt.Errorf("content is required")
+	}
+	if len([]byte(req.Content)) > maxMsgOnEventTextBytes {
+		return SendWeComMsgOnEventResponse{}, fmt.Errorf("content exceeds %d bytes (code can only be used once, splitting not supported)", maxMsgOnEventTextBytes)
+	}
+
+	accessToken := req.AccessToken
+	if accessToken == "" {
+		var err error
+		accessToken, err = getWeComCustomerAccessToken(ctx)
+		if err != nil {
+			return SendWeComMsgOnEventResponse{}, err
+		}
+	}
+
+	body := map[string]interface{}{
+		"code":    req.Code,
+		"msgtype": "text",
+		"text":    map[string]string{"content": req.Content},
+	}
+	if req.MsgID != "" {
+		body["msgid"] = req.MsgID
+	}
+
+	msgID, err := sendWeComMsgOnEventAPI(ctx, accessToken, body)
+	if err != nil {
+		return SendWeComMsgOnEventResponse{Success: false, Message: fmt.Sprintf("发送失败: %v", err)}, err
+	}
+	return SendWeComMsgOnEventResponse{Success: true, Message: "欢迎语发送成功", MsgID: msgID}, nil
 }
 
 // SendWeComCustomerImage 发送企业微信客服图片消息（发给个人微信用户）

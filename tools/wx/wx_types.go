@@ -183,6 +183,22 @@ type SendWeComCustomerMessageResponse struct {
 	Message string `json:"message"`
 }
 
+// SendWeComMsgOnEventRequest 发送客服欢迎语（事件响应消息）的请求参数
+// 用于「进入会话」等事件，code 来自 sync_msg 的 event.welcome_code 字段
+type SendWeComMsgOnEventRequest struct {
+	Code        string `json:"code" jsonschema:"required,description=必填：welcome_code，来自 sync_msg 事件，仅可使用一次"`
+	MsgID       string `json:"msgid" jsonschema:"description=可选：消息 ID，不传则系统自动生成"`
+	Content     string `json:"content" jsonschema:"required,description=必填：文本欢迎语内容"`
+	AccessToken string `json:"access_token" jsonschema:"description=可选：第三方传入的 access_token"`
+}
+
+// SendWeComMsgOnEventResponse 发送客服欢迎语的响应
+type SendWeComMsgOnEventResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	MsgID   string `json:"msgid,omitempty"`
+}
+
 // SendWeComCustomerImageRequest 发送企业微信客服图片消息的请求参数（发给个人微信用户）
 type SendWeComCustomerImageRequest struct {
 	OpenKfID    string `json:"open_kf_id" jsonschema:"required,description=必填：客服账号 ID"`

@@ -78,6 +78,29 @@ func NewWeComTextCardTool(ctx context.Context) (tool.BaseTool, error) {
 	)
 }
 
+// NewWeComMsgOnEventTool 创建发送客服欢迎语工具
+func NewWeComMsgOnEventTool(ctx context.Context) (tool.BaseTool, error) {
+	cfg := config.Get()
+	if cfg.WeCom.Enabled == nil || !*cfg.WeCom.Enabled {
+		return nil, fmt.Errorf("WeCom tool is not enabled in config")
+	}
+	if cfg.WeCom.CorpID == "" || len(cfg.WeCom.Applications) == 0 {
+		return nil, fmt.Errorf("WeCom CorpID or Applications not configured")
+	}
+
+	return utils.InferTool(
+		"send_wecom_msg_on_event",
+		"通过企业微信客服发送欢迎语（事件响应消息）。用于用户进入会话时，使用 sync_msg 事件中的 welcome_code 发送欢迎语。code 仅可使用一次，收到事件后 20 秒内有效。",
+		func(ctx context.Context, req *SendWeComMsgOnEventRequest) (*SendWeComMsgOnEventResponse, error) {
+			resp, err := SendWeComMsgOnEvent(ctx, *req)
+			if err != nil {
+				return nil, err
+			}
+			return &resp, nil
+		},
+	)
+}
+
 // NewWeComCustomerMessageTool 创建企业微信客服消息发送工具（发给个人微信用户）
 func NewWeComCustomerMessageTool(ctx context.Context) (tool.BaseTool, error) {
 	cfg := config.Get()

@@ -118,6 +118,10 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	if err == nil {
 		tools = append(tools, wecomCustomerTool)
 	}
+	wecomMsgOnEventTool, err := wx.NewWeComMsgOnEventTool(ctx)
+	if err == nil {
+		tools = append(tools, wecomMsgOnEventTool)
+	}
 	wecomCustomerImageTool, err := wx.NewWeComCustomerImageTool(ctx)
 	if err == nil {
 		tools = append(tools, wecomCustomerImageTool)
