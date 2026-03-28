@@ -95,6 +95,17 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 		tools = append(tools, writeReviewFileTool)
 	}
 
+	// 1.8. UI 预览 manifest / 补丁 / 导出 zip（需 context 注入 workspace_path 或 agent_session_id）
+	if writePreviewManifestTool, err := ui_ux.NewWritePreviewManifestTool(ctx); err == nil {
+		tools = append(tools, writePreviewManifestTool)
+	}
+	if applyPreviewPatchTool, err := ui_ux.NewApplyPreviewPatchTool(ctx); err == nil {
+		tools = append(tools, applyPreviewPatchTool)
+	}
+	if exportPreviewBundleTool, err := ui_ux.NewExportPreviewBundleTool(ctx); err == nil {
+		tools = append(tools, exportPreviewBundleTool)
+	}
+
 	// 2. 微信推送工具（如果已启用）
 	wxTool, err := wx.NewWeChatMessageTool(ctx)
 	if err == nil {

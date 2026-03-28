@@ -43,12 +43,47 @@ func SaveForReview(ctx context.Context, filename, content string) (path string, 
 	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
 		return "", fmt.Errorf("write temp file: %w", err)
 	}
+	return absPathOf(fullPath)
+}
 
+// SaveBytesForReview 将二进制内容写入临时/工作空间文件（如 zip），返回绝对路径。
+func SaveBytesForReview(ctx context.Context, filename string, content []byte) (path string, err error) {
+	if filename == "" {
+		return "", fmt.Errorf("filename cannot be empty")
+	}
+	if err := validateFilename(filename); err != nil {
+		return "", err
+	}
+
+	baseDir, err := resolveBaseDir(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	dir := filepath.Join(baseDir, filename)
+	dir = filepath.Dir(dir)
+	fullPath := filepath.Join(baseDir, filename)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("create temp dir: %w", err)
+	}
+	if err := os.WriteFile(fullPath, content, 0644); err != nil {
+		return "", fmt.Errorf("write temp file: %w", err)
+	}
+	return absPathOf(fullPath)
+}
+
+func absPathOf(fullPath string) (string, error) {
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
 		return fullPath, nil
 	}
 	return absPath, nil
+}
+
+// ValidateRelativePath 校验相对路径（与 SaveForReview 规则一致），供其他包复用。
+func ValidateRelativePath(filename string) error {
+	return validateFilename(filename)
 }
 
 // GetBasePath 从 context 解析基础目录绝对路径。

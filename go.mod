@@ -4,6 +4,7 @@ go 1.24.8
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/cloudwego/eino v0.8.0-alpha.12
 	github.com/cloudwego/eino-ext/components/document/loader/file v0.0.0-20260204064123-1f91f547c77e
 	github.com/cloudwego/eino-ext/components/document/transformer/splitter/markdown v0.0.0-20260204064123-1f91f547c77e
@@ -11,6 +12,7 @@ require (
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.8
 	github.com/go-rod/rod v0.113.0
 	github.com/go-rod/stealth v0.4.9
+	github.com/google/uuid v1.6.0
 	github.com/pinecone-io/go-pinecone/v4 v4.1.4
 	github.com/whyiyhw/go-workwx v0.1.0
 	google.golang.org/protobuf v1.35.1
@@ -21,7 +23,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/PuerkitoBio/goquery v1.9.2 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -37,7 +38,6 @@ require (
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect

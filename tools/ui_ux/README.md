@@ -17,7 +17,15 @@
 - **`ui_ux_normalize`**: 设计系统标准化工具
 - **`ui_ux_reference`**: 参考文档检索工具（7 个领域的最佳实践）
 
-### 2. Agent 编排
+### 3. 预览与结构化 Patch（宿主 iframe / Sandpack）
+
+- **`write_preview_manifest`**: 在工作区或会话目录写入 `preview-manifest.json`，描述 `entry`、`assets`、`editable_model`、初始 `revision`（需 context 注入 `workspace_path` 或 `agent_session_id`）
+- **`apply_preview_patch`**: 按清单应用结构化补丁（`html_text`、`html_attr`、`html_inner`、`json_pointer`、`literal_replace`）；`base_revision` 必须与当前 manifest 一致，成功则 `revision` 自增
+- **`export_preview_bundle`**: 将 manifest 涉及的文件打成 zip 并写回工作区/会话目录
+
+设计说明见 [docs/ideas/2026-03-28_UI预览与用户编辑工具方案.md](../../docs/ideas/2026-03-28_UI预览与用户编辑工具方案.md)。
+
+### 4. Agent 编排
 
 - **`UIDesignSystemAgent`**: 智能编排的 Agent，自动完成设计系统生成工作流
 - **`NewUIDesignSystemAgentTool`**: 将 Agent 包装成工具，供其他 Agent 使用
@@ -43,7 +51,89 @@ designSystemTool, _ := ui_ux.NewGenerateDesignSystemTool(ctx)
 // 3. 持久化设计系统
 persistTool, _ := ui_ux.NewPersistDesignSystemTool(ctx)
 // 使用 persistTool...
+
+// 4. 预览清单 / 打补丁 / 导出（需 ctx 注入 workspace_path 或 agent_session_id）
+manifestTool, _ := ui_ux.NewWritePreviewManifestTool(ctx)
+patchTool, _ := ui_ux.NewApplyPreviewPatchTool(ctx)
+exportTool, _ := ui_ux.NewExportPreviewBundleTool(ctx)
+// 使用方式见下文「预览产物工作流」
 ```
+
+### 预览产物工作流（manifest / Patch / zip）
+
+与 `write_review_file` 相同：**必须在 context 中注入** `workspace_path`（DigFlow）或 `agent_session_id`（DigPdf 等会话目录）。以下为推荐顺序。
+
+1. **`write_review_file`**：写入页面片段或完整 HTML（建议关键区块带 `data-uiux-id`）、可选 `preview/content.json` 等。
+2. **`write_preview_manifest`**：登记 `entry`、`assets`、`editable_model` 与初始 `revision`（默认从 1 开始）。
+3. **宿主预览**：根据 manifest 的 `entry` 拉取文件做 iframe / Sandpack 展示；用户编辑后组装补丁。
+4. **`apply_preview_patch`**：提交 `patches`；**`base_revision` 必须与当前 manifest 的 `revision` 一致**（乐观锁），成功后服务端将 `revision` 加 1。
+5. **`export_preview_bundle`**（可选）：打包 entry、assets、editable_model 与 manifest 为 zip。
+
+设计背景见 [docs/ideas/2026-03-28_UI预览与用户编辑工具方案.md](../../docs/ideas/2026-03-28_UI预览与用户编辑工具方案.md)。
+
+#### LLM 工具一览（已随 `tools.BaseTools()` 注册）
+
+| 工具名 | 主要参数 | 说明 |
+|--------|----------|------|
+| `write_preview_manifest` | `kind`（如 `static_html` / `react_sandpack`）、`entry`；可选 `manifest_filename`、`assets[]`、`editable_model`、`artifact_id`、`initial_revision` | 默认写入 `preview/preview-manifest.json`；未传 `artifact_id` 时自动生成 UUID |
+| `apply_preview_patch` | `manifest_path` 或 `artifact_id`、`base_revision`、`patches[]` | 对清单内允许的文件应用结构化补丁；支持按 `artifact_id` 自动定位 manifest |
+| `export_preview_bundle` | `manifest_path` 或 `artifact_id`；可选 `zip_filename`（默认 `preview/bundle.zip`） | 写出 zip 的**绝对路径**，供下载或后续处理 |
+
+#### 补丁 `patches[].type` 说明
+
+| type | 必填字段 | 作用 |
+|------|----------|------|
+| `html_text` | `selector`, `text` | 匹配 `entry` 指向的 HTML；将元素**文本内容**替换为 `text`（经转义，不含富文本标签） |
+| `html_attr` | `selector`, `attr` 及 `value` 或 `text` | 设置属性（如 `src`、`alt`）；优先使用 `value` |
+| `html_inner` | `selector`, `html` | 设置匹配元素的 inner HTML（仅建议使用可信内容） |
+| `json_pointer` | `pointer`（如 `/hero/title`）、`value` | 要求 manifest 已配置 `editable_model`；按 JSON 路径写入（支持一般对象/数组路径） |
+| `literal_replace` | `file`, `old`, `new` | `old` 在全文中须**唯一**匹配；`file` 须出现在 manifest 的 entry/assets/editable_model 中；后缀白名单由 `UIUX.Preview.AllowedExtensions` 控制（为空时使用默认值） |
+
+#### `preview-manifest.json` 示例
+
+```json
+{
+  "artifact_id": "550e8400-e29b-41d4-a716-446655440000",
+  "kind": "static_html",
+  "revision": 1,
+  "entry": "preview/index.html",
+  "assets": ["preview/logo.png"],
+  "editable_model": "preview/content.json"
+}
+```
+
+#### 程序化 API（宿主后端可直接调用，与工具逻辑一致）
+
+```go
+import (
+    "context"
+
+    "github.com/originaleric/digeino/pkg/tempstorage"
+    "github.com/originaleric/digeino/tools/ui_ux"
+)
+
+ctx := context.WithValue(context.Background(), tempstorage.ContextKeyWorkspacePath, workspaceRoot)
+
+res, err := ui_ux.ApplyPreviewPatches(ctx, "preview/preview-manifest.json", currentRevision, []ui_ux.PreviewPatch{
+    {Type: "html_text", Selector: "[data-uiux-id='hero-title']", Text: "新标题"},
+})
+if err != nil { /* 处理冲突 revision mismatch 等 */ }
+nextRev := res.Revision
+
+_, err = ui_ux.WritePreviewZIPToFile(ctx, "preview/preview-manifest.json", "preview/export.zip")
+// 或使用 BuildPreviewZIP 自行处理字节流
+```
+
+zip 二进制写入使用 **`tempstorage.SaveBytesForReview`**（与 `SaveForReview` 相同的路径规则）。
+
+#### 历史快照（history）
+
+- `apply_preview_patch` 在改写目标文件前会按当前 revision 生成快照，默认目录：
+  - `preview/history/{artifact_id}/rev-000001/...`
+- 控制项：
+  - `UIUX.Preview.HistoryEnabled`：是否启用（未设置时默认启用）
+  - `UIUX.Preview.HistoryDir`：快照根目录（默认 `preview/history`）
+- manifest 文件本身也会在升级 revision 前保存快照，便于后续回滚。
 
 ### 方式二：使用 Agent（推荐）
 
@@ -178,6 +268,7 @@ Agent 内部自动执行以下工作流：
 3. **补充搜索** - 根据需要调用 `ui_ux_search` 获取详细信息
 4. **技术栈指南** - 如果指定了技术栈，获取相关指南
 5. **持久化** - 如果用户请求，调用 `persist_design_system` 保存到文件
+6. **（可选）预览链路** - 由上层 Prompt 引导：生成 HTML/React 后用 `write_review_file`，再 `write_preview_manifest`；用户微调后 `apply_preview_patch`，需要交付压缩包时用 `export_preview_bundle`
 
 ## 设计系统生成流程
 
@@ -387,6 +478,9 @@ path, err := tempstorage.SaveForReview(ctx, "designer_output.css", cssContent)
 | `ui_ux_audit` | 是（必填） | 将生成的 CSS/HTML/代码写入临时文件或 workspace，再将路径传入，做技术质量审查（可访问性、性能、主题、响应式等） |
 | `ui_ux_critique` | 是（必填） | 同上，用于 UX 设计层面的审查（视觉层次、信息架构、交互流等） |
 | `ui_ux_normalize` | 是（必填） | 更适合与已经持久化的设计系统文件配合，做长期资产的标准化；对一次性临时输出的收益相对较低 |
+| `write_preview_manifest` | 否 | 写入 `preview-manifest.json`，登记可预览 entry 与资源路径 |
+| `apply_preview_patch` | 否 | 对 entry / editable_model 等应用结构化补丁（乐观锁 `base_revision`） |
+| `export_preview_bundle` | 否 | 将 manifest 涉及文件导出为 zip |
 
 综合来看：
 
@@ -409,6 +503,11 @@ UIUX:
     # - 未指定: storage/app/ui_ux/design-system/my-project/MASTER.md
   TempStorage:
     BaseDir: "storage/temp"          # 临时存储根目录（供 audit/critique 使用，会话模式）
+  Preview:
+    MaxPatchFileBytes: 0             # 预览 Patch 单文件大小上限（字节），0 为默认 5MiB
+    AllowedExtensions: [".tsx", ".jsx", ".ts", ".js", ".html", ".htm", ".json", ".css", ".md"] # literal_replace 白名单
+    HistoryEnabled: true             # 是否保留补丁前快照（未设置时默认启用）
+    HistoryDir: "preview/history"    # 快照目录（相对 workspace/session 根目录）
 ```
 
 **存储路径优先级**：

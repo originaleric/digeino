@@ -58,8 +58,14 @@ type WebhookConfig struct {
 // StatusStoreConfig 状态存储配置
 type StatusStoreConfig struct {
 	Enabled *bool       `yaml:"Enabled" json:"Enabled,omitempty"`
-	Type    string      `yaml:"Type" json:"Type,omitempty"` // memory, mysql
+	Type    string      `yaml:"Type" json:"Type,omitempty"` // memory, mysql, pinecone, hybrid
+	Vector  VectorConfig `yaml:"Vector" json:"Vector"`
 	MySQL   MySQLConfig `yaml:"MySQL" json:"MySQL"`
+}
+
+// VectorConfig 向量存储特性配置
+type VectorConfig struct {
+	Enabled *bool `yaml:"Enabled" json:"Enabled,omitempty"`
 }
 
 // MySQLConfig MySQL 配置
@@ -127,6 +133,19 @@ type ChatModelConfig struct {
 type UIUXConfig struct {
 	Storage     UIUXStorageConfig     `yaml:"Storage" json:"Storage"`
 	TempStorage TempStorageConfig     `yaml:"TempStorage" json:"TempStorage"`
+	Preview     UIUXPreviewConfig     `yaml:"Preview" json:"Preview"`
+}
+
+// UIUXPreviewConfig 预览产物与 Patch 相关限制
+type UIUXPreviewConfig struct {
+	// MaxPatchFileBytes 单文件读取/写入上限（字节），0 表示使用默认 5MiB
+	MaxPatchFileBytes int `yaml:"MaxPatchFileBytes" json:"MaxPatchFileBytes"`
+	// AllowedExtensions literal_replace 允许修改的文件后缀（为空时使用内置默认值）
+	AllowedExtensions []string `yaml:"AllowedExtensions" json:"AllowedExtensions"`
+	// HistoryEnabled 是否启用补丁前快照（nil 或 true 为启用）
+	HistoryEnabled *bool `yaml:"HistoryEnabled" json:"HistoryEnabled,omitempty"`
+	// HistoryDir 快照目录（相对 workspace/session 根目录），默认 preview/history
+	HistoryDir string `yaml:"HistoryDir" json:"HistoryDir"`
 }
 
 // UIUXStorageConfig UI/UX 存储配置
@@ -285,6 +304,7 @@ func Default() *Config {
 	enabled := true
 	disabled := false
 	wechatDisabled := false
+	historyEnabled := true
 	dataFlowDisabled := false
 	return &Config{
 		HttpServer: HttpServerConfig{
@@ -307,6 +327,9 @@ func Default() *Config {
 			Store: StatusStoreConfig{
 				Enabled: &enabled,
 				Type:    "memory",
+				Vector: VectorConfig{
+					Enabled: &disabled,
+				},
 			},
 			DataFlow: DataFlowConfig{
 				Enabled: &dataFlowDisabled,
@@ -335,6 +358,12 @@ func Default() *Config {
 			},
 			TempStorage: TempStorageConfig{
 				BaseDir: "storage/temp",
+			},
+			Preview: UIUXPreviewConfig{
+				MaxPatchFileBytes: 0,
+				AllowedExtensions: []string{".tsx", ".jsx", ".ts", ".js", ".html", ".htm", ".json", ".css", ".md"},
+				HistoryEnabled:    &historyEnabled,
+				HistoryDir:        "preview/history",
 			},
 		},
 		Tools: ToolsConfig{

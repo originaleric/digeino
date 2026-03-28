@@ -68,7 +68,14 @@ UIUX:
     # 示例：
     # - AppName="travel": storage/app/ui_ux/travel/design-system/my-project/MASTER.md
     # - 未指定: storage/app/ui_ux/design-system/my-project/MASTER.md
- 
+  TempStorage:
+    BaseDir: "storage/temp"          # 会话临时目录（write_review_file / 预览产物）
+  Preview:
+    MaxPatchFileBytes: 0             # 单文件 Patch 上限（字节），0 表示默认 5MiB
+    AllowedExtensions: [".tsx", ".jsx", ".ts", ".js", ".html", ".htm", ".json", ".css", ".md"]  # literal_replace 允许后缀
+    HistoryEnabled: true             # apply_preview_patch 写入前是否保留历史快照
+    HistoryDir: "preview/history"    # 历史快照目录（相对 workspace/session 根目录）
+
 Tools:
   Firecrawl:
     ApiKey: ""
