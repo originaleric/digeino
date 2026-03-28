@@ -3,11 +3,24 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"hash/fnv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/originaleric/digeino/config"
+)
+
+const (
+	defaultEventSource = "digeino.status_collector"
+	sinkQueueSize       = 256
+	sinkEnqueueTimeout  = 50 * time.Millisecond
+	sinkRetryCount      = 3
+	sinkRetryDelay      = 100 * time.Millisecond
+	defaultSampleRate   = 100
+	defaultMaxPayload   = 262144 // 256KiB
 )
 
 // StatusLogger 日志接口，调用方可选择性实现
@@ -38,13 +51,51 @@ type StatusCollector struct {
 
 	enableDataFlow bool
 	logger         StatusLogger
+	sampleRate     int
+	maxPayloadSize int
+
+	dispatchOnce sync.Once
+	sinkQueue    chan sinkTask
+	statsMu      sync.Mutex
+	stats        DispatchStats
+}
+
+type sinkTask struct {
+	ctx    context.Context
+	status ExecutionStatus
+	store  StatusStoreInterface
+	client *WebhookClient
+}
+
+// DispatchStats 分发统计信息，用于运行期观测。
+type DispatchStats struct {
+	Enqueued         int64 `json:"enqueued"`
+	QueueFallback    int64 `json:"queue_fallback"`
+	StoreSuccess     int64 `json:"store_success"`
+	StoreFailure     int64 `json:"store_failure"`
+	WebhookSuccess   int64 `json:"webhook_success"`
+	WebhookFailure   int64 `json:"webhook_failure"`
+	RetryCount       int64 `json:"retry_count"`
+	SampledOut       int64 `json:"sampled_out"`
+	PayloadCompacted int64 `json:"payload_compacted"`
 }
 
 // NewStatusCollector 创建状态收集器，DataFlow 开关从 config.Get().Status.DataFlow 读取，默认关闭
 func NewStatusCollector(executionID, appName, requestID string) *StatusCollector {
 	enableDataFlow := false
-	if cfg := config.Get(); cfg != nil && cfg.Status.DataFlow.Enabled != nil && *cfg.Status.DataFlow.Enabled {
-		enableDataFlow = true
+	sampleRate := defaultSampleRate
+	maxPayloadSize := defaultMaxPayload
+
+	if cfg := config.Get(); cfg != nil {
+		if cfg.Status.DataFlow.Enabled != nil && *cfg.Status.DataFlow.Enabled {
+			enableDataFlow = true
+		}
+		if cfg.Status.Event.SampleRate >= 0 && cfg.Status.Event.SampleRate <= 100 {
+			sampleRate = cfg.Status.Event.SampleRate
+		}
+		if cfg.Status.Event.MaxPayloadBytes > 0 {
+			maxPayloadSize = cfg.Status.Event.MaxPayloadBytes
+		}
 	}
 	return &StatusCollector{
 		executionID:    executionID,
@@ -54,6 +105,8 @@ func NewStatusCollector(executionID, appName, requestID string) *StatusCollector
 		nodeStartTime:  make(map[string]time.Time),
 		tokenUsageMap:  make(map[string]*Usage),
 		enableDataFlow: enableDataFlow,
+		sampleRate:     sampleRate,
+		maxPayloadSize: maxPayloadSize,
 	}
 }
 
@@ -71,11 +124,24 @@ func (sc *StatusCollector) SetLogger(logger StatusLogger) {
 	sc.logger = logger
 }
 
+// SetEventPolicy 设置事件分发策略（覆盖配置文件）。
+func (sc *StatusCollector) SetEventPolicy(sampleRate, maxPayloadBytes int) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	if sampleRate >= 0 && sampleRate <= 100 {
+		sc.sampleRate = sampleRate
+	}
+	if maxPayloadBytes > 0 {
+		sc.maxPayloadSize = maxPayloadBytes
+	}
+}
+
 // AddWebhookClient 添加 Webhook 客户端
 func (sc *StatusCollector) AddWebhookClient(client *WebhookClient) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	sc.webhookClients = append(sc.webhookClients, client)
+	sc.ensureDispatcherLocked()
 }
 
 // SetStatusStore 设置状态存储
@@ -83,6 +149,7 @@ func (sc *StatusCollector) SetStatusStore(store StatusStoreInterface) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	sc.statusStore = store
+	sc.ensureDispatcherLocked()
 }
 
 // SetStatusCallback 设置状态回调
@@ -101,15 +168,20 @@ func (sc *StatusCollector) OnNodeStart(ctx context.Context, nodeKey, nodeType st
 	sc.mu.Unlock()
 
 	status := ExecutionStatus{
-		Type:        "node_start",
-		Timestamp:   time.Now().UnixMilli(),
-		ExecutionID: sc.executionID,
-		NodeKey:     nodeKey,
-		NodeType:    nodeType,
-		Status:      "running",
-		AppName:     sc.appName,
-		RequestID:   sc.requestID,
-		DataFlow:    sc.marshalDataFlow(input, nil),
+		Type:          "node_start",
+		SchemaVersion: ExecutionEventSchemaV1,
+		EventType:     string(EventTypeStarted),
+		Timestamp:     time.Now().UnixMilli(),
+		ExecutionID:   sc.executionID,
+		NodeKey:       nodeKey,
+		NodeID:        nodeKey,
+		NodeType:      nodeType,
+		Attempt:       1,
+		Source:        defaultEventSource,
+		Status:        "running",
+		AppName:       sc.appName,
+		RequestID:     sc.requestID,
+		DataFlow:      sc.marshalDataFlow(input, nil),
 	}
 
 	if logger != nil {
@@ -139,16 +211,21 @@ func (sc *StatusCollector) OnNodeEnd(ctx context.Context, nodeKey, nodeType stri
 	}
 
 	status := ExecutionStatus{
-		Type:        "node_end",
-		Timestamp:   time.Now().UnixMilli(),
-		ExecutionID: sc.executionID,
-		NodeKey:     nodeKey,
-		NodeType:    nodeType,
-		Status:      "success",
-		AppName:     sc.appName,
-		RequestID:   sc.requestID,
-		DataFlow:    sc.marshalDataFlow(nil, output),
-		Usage:       nodeUsage,
+		Type:          "node_end",
+		SchemaVersion: ExecutionEventSchemaV1,
+		EventType:     string(EventTypeSucceeded),
+		Timestamp:     time.Now().UnixMilli(),
+		ExecutionID:   sc.executionID,
+		NodeKey:       nodeKey,
+		NodeID:        nodeKey,
+		NodeType:      nodeType,
+		Attempt:       1,
+		Source:        defaultEventSource,
+		Status:        "success",
+		AppName:       sc.appName,
+		RequestID:     sc.requestID,
+		DataFlow:      sc.marshalDataFlow(nil, output),
+		Usage:         nodeUsage,
 	}
 
 	if ok {
@@ -157,6 +234,7 @@ func (sc *StatusCollector) OnNodeEnd(ctx context.Context, nodeKey, nodeType stri
 
 	if err != nil {
 		status.Status = "error"
+		status.EventType = string(EventTypeFailed)
 		status.Error = err.Error()
 	}
 
@@ -181,12 +259,16 @@ func (sc *StatusCollector) OnComplete(ctx context.Context, result *schema.Messag
 	sc.mu.Unlock()
 
 	status := ExecutionStatus{
-		Type:        "complete",
-		Timestamp:   time.Now().UnixMilli(),
-		ExecutionID: sc.executionID,
-		Status:      "success",
-		AppName:     sc.appName,
-		RequestID:   sc.requestID,
+		Type:          "complete",
+		SchemaVersion: ExecutionEventSchemaV1,
+		EventType:     string(EventTypeCompleted),
+		Timestamp:     time.Now().UnixMilli(),
+		ExecutionID:   sc.executionID,
+		Attempt:       1,
+		Source:        defaultEventSource,
+		Status:        "success",
+		AppName:       sc.appName,
+		RequestID:     sc.requestID,
 		ControlFlow: &ControlFlowStatus{
 			Path: path,
 		},
@@ -195,6 +277,7 @@ func (sc *StatusCollector) OnComplete(ctx context.Context, result *schema.Messag
 
 	if err != nil {
 		status.Status = "error"
+		status.EventType = string(EventTypeFailed)
 		status.Error = err.Error()
 	}
 
@@ -219,21 +302,217 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 		callback(status)
 	}
 
+	asyncStatus := status
+	if !sc.shouldSendToAsyncSinks(asyncStatus) {
+		sc.updateStats(func(stats *DispatchStats) {
+			stats.SampledOut++
+		})
+		return
+	}
+	var compacted bool
+	asyncStatus, compacted = sc.compactStatusByPayloadLimit(asyncStatus)
+	if compacted {
+		sc.updateStats(func(stats *DispatchStats) {
+			stats.PayloadCompacted++
+		})
+	}
+
 	// 2. 异步存储状态，避免数据库等慢操作阻塞主流程
 	if store != nil {
-		go func() {
-			store.AddStatus(sc.executionID, status)
-		}()
+		sc.enqueueSinkTask(sinkTask{
+			ctx:    detachContext(ctx),
+			status: asyncStatus,
+			store:  store,
+		})
 	}
 
 	// 3. 异步发送 Webhook
 	if len(clients) > 0 {
-		go func() {
-			for _, client := range clients {
-				_ = client.SendStatus(ctx, status)
-			}
-		}()
+		safeCtx := detachContext(ctx)
+		for _, client := range clients {
+			sc.enqueueSinkTask(sinkTask{
+				ctx:    safeCtx,
+				status: asyncStatus,
+				client: client,
+			})
+		}
 	}
+}
+
+func detachContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return context.WithoutCancel(ctx)
+}
+
+func (sc *StatusCollector) ensureDispatcherLocked() {
+	sc.dispatchOnce.Do(func() {
+		sc.sinkQueue = make(chan sinkTask, sinkQueueSize)
+		go sc.runSinkDispatcher()
+	})
+}
+
+func (sc *StatusCollector) enqueueSinkTask(task sinkTask) {
+	sc.mu.Lock()
+	sc.ensureDispatcherLocked()
+	queue := sc.sinkQueue
+	sc.mu.Unlock()
+
+	timer := time.NewTimer(sinkEnqueueTimeout)
+	defer timer.Stop()
+
+	select {
+	case queue <- task:
+		sc.updateStats(func(stats *DispatchStats) {
+			stats.Enqueued++
+		})
+		return
+	case <-timer.C:
+		// 队列拥堵时降级为独立 goroutine，优先保证事件不丢。
+		sc.updateStats(func(stats *DispatchStats) {
+			stats.QueueFallback++
+		})
+		go sc.executeSinkTask(task)
+	}
+}
+
+func (sc *StatusCollector) runSinkDispatcher() {
+	for task := range sc.sinkQueue {
+		sc.executeSinkTask(task)
+	}
+}
+
+func (sc *StatusCollector) executeSinkTask(task sinkTask) {
+	for i := 0; i <= sinkRetryCount; i++ {
+		var err error
+		sinkName := "unknown"
+		if task.store != nil {
+			sinkName = "store"
+			if ok := task.store.AddStatus(sc.executionID, task.status); !ok {
+				err = fmt.Errorf("status store rejected execution_id=%s", sc.executionID)
+			}
+		}
+		if task.client != nil {
+			sinkName = "webhook"
+			err = task.client.SendStatus(task.ctx, task.status)
+		}
+		if err == nil {
+			sc.updateSinkResultStats(sinkName, true)
+			return
+		}
+		if i < sinkRetryCount {
+			sc.updateStats(func(stats *DispatchStats) {
+				stats.RetryCount++
+			})
+			time.Sleep(sinkRetryDelay)
+			continue
+		}
+		sc.updateSinkResultStats(sinkName, false)
+	}
+}
+
+func (sc *StatusCollector) shouldSendToAsyncSinks(status ExecutionStatus) bool {
+	sc.mu.Lock()
+	sampleRate := sc.sampleRate
+	sc.mu.Unlock()
+
+	if status.NormalizeEventType() == EventTypeCompleted || status.NormalizeEventType() == EventTypeFailed {
+		return true
+	}
+	if sampleRate >= 100 {
+		return true
+	}
+	if sampleRate <= 0 {
+		return false
+	}
+
+	hasher := fnv.New32a()
+	_, _ = hasher.Write([]byte(strings.ToLower(status.DedupeKey())))
+	return int(hasher.Sum32()%100) < sampleRate
+}
+
+func (sc *StatusCollector) compactStatusByPayloadLimit(status ExecutionStatus) (ExecutionStatus, bool) {
+	sc.mu.Lock()
+	limit := sc.maxPayloadSize
+	sc.mu.Unlock()
+	if limit <= 0 {
+		return status, false
+	}
+
+	if statusPayloadSize(status) <= limit {
+		return status, false
+	}
+
+	compacted := status
+	changed := false
+	if compacted.DataFlow != nil && (len(compacted.DataFlow.InputData) > 0 || len(compacted.DataFlow.OutputData) > 0) {
+		df := *compacted.DataFlow
+		df.InputData = nil
+		df.OutputData = nil
+		compacted.DataFlow = &df
+		changed = true
+	}
+	if statusPayloadSize(compacted) <= limit {
+		return compacted, changed
+	}
+
+	if compacted.DataFlow != nil {
+		compacted.DataFlow = nil
+		changed = true
+	}
+	if statusPayloadSize(compacted) <= limit {
+		return compacted, changed
+	}
+
+	if compacted.ControlFlow != nil {
+		cf := *compacted.ControlFlow
+		cf.Path = nil
+		compacted.ControlFlow = &cf
+		changed = true
+	}
+	if statusPayloadSize(compacted) <= limit {
+		return compacted, changed
+	}
+
+	if len(compacted.Error) > 512 {
+		compacted.Error = compacted.Error[:512] + "...(truncated)"
+		changed = true
+	}
+	return compacted, changed
+}
+
+func statusPayloadSize(status ExecutionStatus) int {
+	b, err := json.Marshal(status)
+	if err != nil {
+		return 0
+	}
+	return len(b)
+}
+
+func (sc *StatusCollector) updateSinkResultStats(sink string, success bool) {
+	sc.updateStats(func(stats *DispatchStats) {
+		switch sink {
+		case "store":
+			if success {
+				stats.StoreSuccess++
+			} else {
+				stats.StoreFailure++
+			}
+		case "webhook":
+			if success {
+				stats.WebhookSuccess++
+			} else {
+				stats.WebhookFailure++
+			}
+		}
+	})
+}
+
+func (sc *StatusCollector) updateStats(update func(stats *DispatchStats)) {
+	sc.statsMu.Lock()
+	defer sc.statsMu.Unlock()
+	update(&sc.stats)
 }
 
 // CollectTokenUsage 收集TokenUsage
@@ -279,6 +558,13 @@ func (sc *StatusCollector) GetStatusHistory() []ExecutionStatus {
 	history := make([]ExecutionStatus, len(sc.statusHistory))
 	copy(history, sc.statusHistory)
 	return history
+}
+
+// GetDispatchStats 获取 sink 分发统计信息。
+func (sc *StatusCollector) GetDispatchStats() DispatchStats {
+	sc.statsMu.Lock()
+	defer sc.statsMu.Unlock()
+	return sc.stats
 }
 
 // getTotalUsageLocked 获取汇总 Usage，调用方需已持 sc.mu

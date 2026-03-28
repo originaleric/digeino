@@ -18,8 +18,26 @@ type UserMessage struct {
 // Usage 使用量统计
 type Usage = webhook.Usage
 
+// EventType 统一生命周期事件类型
+type EventType = webhook.EventType
+
+const (
+	EventTypeStarted   = webhook.EventTypeStarted
+	EventTypeSucceeded = webhook.EventTypeSucceeded
+	EventTypeFailed    = webhook.EventTypeFailed
+	EventTypeRetried   = webhook.EventTypeRetried
+	EventTypeSkipped   = webhook.EventTypeSkipped
+	EventTypeCompleted = webhook.EventTypeCompleted
+)
+
 // ExecutionStatus 执行状态
 type ExecutionStatus = webhook.ExecutionStatus
+
+// ExecutionEvent 统一执行事件（推荐消费）
+type ExecutionEvent = webhook.ExecutionEvent
+
+// DispatchStats 分发统计信息
+type DispatchStats = webhook.DispatchStats
 
 // DataFlowStatus 数据流状态
 type DataFlowStatus = webhook.DataFlowStatus

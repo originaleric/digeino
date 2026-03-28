@@ -86,8 +86,8 @@ func (s *memoryStatusStore) AddStatus(executionID string, status webhook.Executi
 	defer record.mu.Unlock()
 
 	record.StatusHistory = append(record.StatusHistory, status)
-	if status.Type == "complete" {
-		if status.Status == "error" {
+	if isTerminalStatus(status) {
+		if isFailedStatus(status) {
 			record.Status = "failed"
 			record.Error = status.Error
 		} else {
@@ -240,12 +240,12 @@ func (s *mysqlStatusStore) AddStatus(executionID string, status webhook.Executio
 	}
 	s.db.Table(s.statusTable).Create(statusModel)
 
-	if status.Type == "complete" {
+	if isTerminalStatus(status) {
 		update := map[string]interface{}{
 			"status":   "completed",
 			"end_time": time.Now(),
 		}
-		if status.Status == "error" {
+		if isFailedStatus(status) {
 			update["status"] = "failed"
 			update["error"] = status.Error
 		}
@@ -296,4 +296,19 @@ func GetDefaultStore() StatusStore {
 		return NewMemoryStatusStore(1000)
 	}
 	return store
+}
+
+func isTerminalStatus(status webhook.ExecutionStatus) bool {
+	if status.Type == "complete" {
+		return true
+	}
+	eventType := status.NormalizeEventType()
+	return eventType == webhook.EventTypeCompleted || eventType == webhook.EventTypeFailed
+}
+
+func isFailedStatus(status webhook.ExecutionStatus) bool {
+	if status.Status == "error" {
+		return true
+	}
+	return status.NormalizeEventType() == webhook.EventTypeFailed
 }

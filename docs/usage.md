@@ -17,6 +17,7 @@ go get github.com/originaleric/digeino
 ### 2.1 依赖结构
 
 配置主要包含两个部分：
+
 - `HttpServer`: 用于获取本地服务端口（构建默认 Webhook URL 时使用）。
 - `Status`: 包含 `Webhook` 和 `Store`（存储）的配置。
 
@@ -35,10 +36,13 @@ Status:
   Webhook:
     Enabled: true
     URL: "https://your-callback-url.com/webhook"
-    Events: ["complete", "error"]
+    Events: ["complete", "error"] # 兼容旧事件名；也可使用 started/succeeded/failed/completed
   Store:
     Enabled: true
     Type: "memory" # 或 "mysql"
+  Event:
+    SampleRate: 100       # 非终态事件采样率（0-100）
+    MaxPayloadBytes: 262144
 ```
 
 然后在代码中加载：
@@ -85,14 +89,55 @@ func someProcess() {
     
     // 更新状态
     store.AddStatus("exec_id_001", webhook.ExecutionStatus{
-        Type: "node_start",
-        NodeKey: "node_1",
-        Status: "running",
+        Type:          "node_start",     // 兼容字段
+        SchemaVersion: "1.0",
+        EventType:     "started",        // 推荐字段
+        NodeKey:       "node_1",         // 兼容字段
+        NodeID:        "node_1",         // 推荐字段
+        Attempt:       1,
+        Source:        "example.manual",
+        Status:        "running",
     })
 }
 ```
 
-### 3.2 Webhook 客户端
+### 3.2 事件字段兼容策略
+
+- `ExecutionStatus.type`：兼容历史消费者，建议继续保留（如 `node_start`/`node_end`/`complete`）。
+- `ExecutionStatus.event_type`：统一生命周期字段，推荐新接入方使用（`started/succeeded/failed/retried/skipped/completed`）。
+- `ExecutionStatus.schema_version`：当前为 `1.0`，用于后续平滑扩展。
+- `ExecutionStatus.node_key` 与 `ExecutionStatus.node_id` 会并行输出，建议新系统优先消费 `node_id`。
+
+### 3.3 推荐入口初始化（统一 HTTP/CLI/批处理）
+
+建议统一通过 `webhook.NewConfiguredCollector` 初始化，避免不同入口手写装配导致行为不一致：
+
+```go
+store := status.NewStatusStoreAdapter(status.GetDefaultStore())
+collector := webhook.NewConfiguredCollector(
+    executionID,
+    appName,
+    requestID,
+    store,                   // 可为 nil
+    sseCallback,             // 可为 nil
+    func() string {          // 可为 nil
+        return webhook.BuildDefaultWebhookURL("http", "")
+    },
+)
+if collector != nil {
+    ctx = webhook.WithStatusCollector(ctx, collector)
+}
+```
+
+可选地，你也可以在运行时覆盖策略（优先级高于配置文件）：
+
+```go
+collector.SetEventPolicy(50, 131072) // 50% 采样，单条上限 128KiB
+stats := collector.GetDispatchStats() // 获取分发统计
+_ = stats
+```
+
+### 3.4 Webhook 客户端
 
 用于将状态更新通过 HTTP 回调发送给第三方系统。
 
@@ -192,9 +237,9 @@ const (
 state.SetStringExtension(ExtensionKeyPdfPath, "/path/to/file.pdf")
 ```
 
-2. **类型安全**：优先使用类型安全的辅助方法（`GetStringExtension`、`SetStringExtension` 等），而不是直接使用 `GetExtension`。
+1. **类型安全**：优先使用类型安全的辅助方法（`GetStringExtension`、`SetStringExtension` 等），而不是直接使用 `GetExtension`。
 
-3. **JSON 序列化**：`Extensions` 字段会被自动序列化到 JSON，使用 `omitempty` 标签，空 map 不会出现在 JSON 中。
+1. **JSON 序列化**：`Extensions` 字段会被自动序列化到 JSON，使用 `omitempty` 标签，空 map 不会出现在 JSON 中。
 
 ### 4.4 存储业务数据结构
 
@@ -248,6 +293,7 @@ func SetOutline(state *digeino.AgentState, outline *DocumentOutline) {
 ### 5.1 核心字段
 
 `AgentState` 只包含通用的核心字段：
+
 - `SessionID`: 会话标识
 - `Query`: 用户查询
 - `Status`: 状态标识
@@ -259,6 +305,7 @@ func SetOutline(state *digeino.AgentState, outline *DocumentOutline) {
 **重要**：`DigEino` 是一个通用库，不包含任何业务特定的结构体（如 `DocumentOutline`、`Page`、`DesignConfig` 等）。这些结构体应该在您的项目包中定义，并通过 `Extensions` 字段存储。
 
 这样做的好处：
+
 - ✅ 保持 `DigEino` 的通用性和可复用性
 - ✅ 不同项目可以定义自己的业务结构体
 - ✅ 避免业务逻辑污染核心库

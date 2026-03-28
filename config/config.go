@@ -26,14 +26,25 @@ type HttpServerConfig struct {
 
 // StatusConfig 状态相关配置：包含 Webhook、Store 与 DataFlow
 type StatusConfig struct {
-	Webhook  AppWebhookConfig  `yaml:"Webhook" json:"Webhook"`
-	Store    StatusStoreConfig `yaml:"Store" json:"Store"`
-	DataFlow DataFlowConfig    `yaml:"DataFlow" json:"DataFlow"`
+	Webhook AppWebhookConfig  `yaml:"Webhook" json:"Webhook"`
+	Store   StatusStoreConfig `yaml:"Store" json:"Store"`
+	// DataFlow 控制输入输出内容采集
+	DataFlow DataFlowConfig `yaml:"DataFlow" json:"DataFlow"`
+	// Event 控制事件分发的采样与 payload 上限
+	Event StatusEventConfig `yaml:"Event" json:"Event"`
 }
 
 // DataFlowConfig DataFlow 追踪配置
 type DataFlowConfig struct {
 	Enabled *bool `yaml:"Enabled" json:"Enabled,omitempty"` // 是否启用，nil 或 false 表示禁用（默认关闭）
+}
+
+// StatusEventConfig 事件分发策略配置
+type StatusEventConfig struct {
+	// SampleRate 非终态事件采样率（0-100），默认 100（不采样）
+	SampleRate int `yaml:"SampleRate" json:"SampleRate,omitempty"`
+	// MaxPayloadBytes 单条状态事件 payload 上限，默认 262144（256KiB）
+	MaxPayloadBytes int `yaml:"MaxPayloadBytes" json:"MaxPayloadBytes,omitempty"`
 }
 
 // AppWebhookConfig 应用级 Webhook 配置
@@ -333,6 +344,10 @@ func Default() *Config {
 			},
 			DataFlow: DataFlowConfig{
 				Enabled: &dataFlowDisabled,
+			},
+			Event: StatusEventConfig{
+				SampleRate:      100,
+				MaxPayloadBytes: 262144,
 			},
 		},
 		WeChat: WeChatConfig{
