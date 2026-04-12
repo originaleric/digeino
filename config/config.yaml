@@ -2,6 +2,20 @@ HttpServer:
   Api:
     Port: ":20201"
 
+# PostRun 自进化学习（默认关闭；宿主需注册 learning.Host）
+Learning:
+  Enabled: false
+  Async: true
+  MemoryNudgeInterval: 0
+  SkillNudgeInterval: 0
+  MinToolCallsForSkill: 3
+  MinConfidence: 0.65
+  PatchFirst: true
+  Retry:
+    MaxAttempts: 2
+    BackoffMs: 500
+  ExecutionPhase: 0   # 0=仅审计 1=+memory 2=+skill
+
 Status:
   Webhook:
     Enabled: false

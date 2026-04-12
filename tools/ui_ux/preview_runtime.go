@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/originaleric/digeino/config"
-	"github.com/originaleric/digeino/pkg/tempstorage"
+	"github.com/originaleric/digeino/tempstorage"
 )
 
 var defaultAllowedExtensions = []string{".tsx", ".jsx", ".ts", ".js", ".html", ".htm", ".json", ".css", ".md"}

@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/originaleric/digeino/pkg/tempstorage"
+	"github.com/originaleric/digeino/tempstorage"
 )
 
 // PreviewPatch 单条修改（与前端 / Agent 约定一致）。

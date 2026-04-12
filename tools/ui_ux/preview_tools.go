@@ -8,7 +8,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/google/uuid"
-	"github.com/originaleric/digeino/pkg/tempstorage"
+	"github.com/originaleric/digeino/tempstorage"
 )
 
 // WritePreviewManifestRequest 注册/覆盖预览产物清单。

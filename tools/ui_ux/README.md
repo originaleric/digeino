@@ -108,7 +108,7 @@ exportTool, _ := ui_ux.NewExportPreviewBundleTool(ctx)
 import (
     "context"
 
-    "github.com/originaleric/digeino/pkg/tempstorage"
+    "github.com/originaleric/digeino/tempstorage"
     "github.com/originaleric/digeino/tools/ui_ux"
 )
 
@@ -445,7 +445,7 @@ UIUX:
 **程序化 API**（供 DigPdf 等应用在代码中调用）：
 
 ```go
-import "github.com/originaleric/digeino/pkg/tempstorage"
+import "github.com/originaleric/digeino/tempstorage"
 
 path, err := tempstorage.SaveForReview(ctx, "designer_output.css", cssContent)
 // 返回绝对路径，可传入 ui_ux_audit / ui_ux_critique

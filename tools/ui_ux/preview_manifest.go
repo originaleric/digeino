@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/originaleric/digeino/config"
-	"github.com/originaleric/digeino/pkg/tempstorage"
+	"github.com/originaleric/digeino/tempstorage"
 )
 
 // PreviewManifest 描述可预览产物（与 docs/ideas 方案一致）。

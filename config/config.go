@@ -15,6 +15,7 @@ type Config struct {
 	ChatModel  ChatModelConfig  `yaml:"ChatModel" json:"ChatModel"`
 	UIUX       UIUXConfig       `yaml:"UIUX" json:"UIUX"`
 	Tools      ToolsConfig      `yaml:"Tools" json:"Tools"`
+	Learning   LearningConfig   `yaml:"Learning" json:"Learning"`
 }
 
 // HttpServerConfig HTTP 服务配置
@@ -37,6 +38,26 @@ type StatusConfig struct {
 // DataFlowConfig DataFlow 追踪配置
 type DataFlowConfig struct {
 	Enabled *bool `yaml:"Enabled" json:"Enabled,omitempty"` // 是否启用，nil 或 false 表示禁用（默认关闭）
+}
+
+// LearningConfig PostRun 自进化学习（默认关闭；由宿主注册 learning.Host 后启用）。
+type LearningConfig struct {
+	Enabled              bool   `yaml:"Enabled" json:"Enabled,omitempty"`
+	Async                bool   `yaml:"Async" json:"Async,omitempty"`
+	MemoryNudgeInterval  int    `yaml:"MemoryNudgeInterval" json:"MemoryNudgeInterval,omitempty"`
+	SkillNudgeInterval   int    `yaml:"SkillNudgeInterval" json:"SkillNudgeInterval,omitempty"`
+	MinToolCallsForSkill int    `yaml:"MinToolCallsForSkill" json:"MinToolCallsForSkill,omitempty"`
+	MinConfidence        float64 `yaml:"MinConfidence" json:"MinConfidence,omitempty"`
+	PatchFirst           bool   `yaml:"PatchFirst" json:"PatchFirst,omitempty"`
+	Retry                LearningRetryConfig `yaml:"Retry" json:"Retry"`
+	// ExecutionPhase 0=仅审计 1=+memory 2=+skill（与 learning.Phase 对齐）
+	ExecutionPhase int `yaml:"ExecutionPhase" json:"ExecutionPhase,omitempty"`
+}
+
+// LearningRetryConfig 学习 Worker 重试策略。
+type LearningRetryConfig struct {
+	MaxAttempts int `yaml:"MaxAttempts" json:"MaxAttempts,omitempty"`
+	BackoffMs   int `yaml:"BackoffMs" json:"BackoffMs,omitempty"`
 }
 
 // StatusEventConfig 事件分发策略配置
@@ -433,6 +454,18 @@ func Default() *Config {
 				Headless:               &enabled,
 				CookieStoreDir:         "storage/app/browser_cookies",
 			},
+		},
+		Learning: LearningConfig{
+			Enabled:              false,
+			Async:                true,
+			MinToolCallsForSkill: 3,
+			MinConfidence:        0.65,
+			PatchFirst:           true,
+			Retry: LearningRetryConfig{
+				MaxAttempts: 2,
+				BackoffMs:   500,
+			},
+			ExecutionPhase: 0,
 		},
 	}
 }

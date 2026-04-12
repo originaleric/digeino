@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/originaleric/digeino/pkg/tempstorage"
+	"github.com/originaleric/digeino/tempstorage"
 )
 
 func TestApplyPreviewPatches_HTMLAndJSON(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/originaleric/digeino/pkg/tempstorage"
+	"github.com/originaleric/digeino/tempstorage"
 )
 
 // BuildPreviewZIP 将 manifest 描述的 entry、assets、editable_model 及 manifest 本身打入 zip。

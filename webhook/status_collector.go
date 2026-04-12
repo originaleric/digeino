@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/cloudwego/eino/schema"
+	"github.com/google/uuid"
 	"github.com/originaleric/digeino/config"
+	"github.com/originaleric/digeino/learning"
 )
 
 const (
@@ -302,6 +304,11 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 		callback(status)
 	}
 
+	// Run 级终态（OnComplete）：触发 PostRun 学习，单点、与异步 sink 解耦
+	if learning.Enabled() && status.Type == "complete" {
+		sc.enqueueLearningRunComplete(status)
+	}
+
 	asyncStatus := status
 	if !sc.shouldSendToAsyncSinks(asyncStatus) {
 		sc.updateStats(func(stats *DispatchStats) {
@@ -337,6 +344,25 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 			})
 		}
 	}
+}
+
+func (sc *StatusCollector) enqueueLearningRunComplete(status ExecutionStatus) {
+	outcome := learning.TerminalSucceeded
+	if status.NormalizeEventType() == EventTypeFailed || status.Status == "error" {
+		outcome = learning.TerminalFailed
+	}
+	ev := learning.LearningEvent{
+		EventID:         uuid.New().String(),
+		EventType:       "run.completed",
+		OccurredAt:      time.Now(),
+		AppName:         sc.appName,
+		ExecutionID:     sc.executionID,
+		RunID:           sc.executionID,
+		SessionID:       sc.requestID,
+		TriggerType:     "user",
+		TerminalOutcome: outcome,
+	}
+	learning.Enqueue(ev)
 }
 
 func detachContext(ctx context.Context) context.Context {
