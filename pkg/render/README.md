@@ -9,6 +9,7 @@
 | `github.com/originaleric/digeino/pkg/render` | 核心：`Parse`、`ParseStablePrefix`、类型 — **不** `import cloudwego/eino` |
 | `github.com/originaleric/digeino/pkg/render/html` | `BlocksToHTMLWithConfig`、`WrapDocumentWithConfig`（呈现由 `config.yaml` 的 `render:` 或代码传入） |
 | `github.com/originaleric/digeino/pkg/render/eino` | `rendereino`：`schema.Message` → 文本 → `Parse` |
+| `github.com/originaleric/digeino/pkg/render/uimodel` | **路线 C**：`[]Block` → `UIModel` / `HybridPayload`（与 `blocks` 并存，供 React 卡片等消费）；映射 YAML 见 `uimodel/config/uimodel.example.yaml` |
 
 ## 如何使用
 
@@ -130,6 +131,34 @@ full := renderhtml.WrapDocumentWithConfig("标题", body, &rc.Render)
 仍可用 `BlocksToHTML(blocks)` / `WrapDocument`（内部等价于 `nil` 配置 → `DefaultHTMLPresentation()`，即嵌入 `config.yaml` 的 `render:`）。
 
 **说明**：`BlocksToHTML` 只产出 **HTML 片段**（无 `<html>`/`<body>`）。`WrapDocument` 才生成整页，并把片段包在 `<div class="llm-render-doc">` 里；`document.inline_css` 里的版式请优先写 `.llm-render-doc` 与块 class（`.llm-thinking`、`.llm-code`），不要依赖 `body`，以免和「仅片段」用法混淆。
+
+### 3b. 路线 C：块 → 卡片 JSON（`uimodel`）
+
+在已有 `[]render.Block` 上生成 **可选** `ui_model`，与 `blocks` 一并下发（HTTP JSON 或 SSE `done` 事件均可）。**`mapping_version` / `mapping_hash` / `mapping_source`** 便于前端按版本兼容；**`mapping_changed_at`** 可选（RFC3339）。
+
+```go
+import (
+    "github.com/originaleric/digeino/pkg/render"
+    "github.com/originaleric/digeino/pkg/render/uimodel"
+)
+
+blocks, err := render.Parse(text, rc.Options)
+if err != nil {
+    return err
+}
+m := uimodel.BuiltinMapping()
+// 或：m, err := uimodel.LoadMappingFromFile("config/uimodel.yaml")
+
+payload, err := uimodel.BuildHybridPayload(uimodel.OutputBoth, blocks, m)
+if err != nil {
+    return err
+}
+// payload.Blocks, payload.UIModel, payload.MappingVersion, payload.MappingHash …
+```
+
+**输出模式**（查询参数或 Header 自行约定字符串）：`blocks` | `ui_model` | `both`（默认 `both`），用 **`uimodel.ParseOutputMode`** 解析。
+
+**前端兜底（React）**：优先用 `payload.ui_model.cards` 渲染；若 `ui_model` 缺失或 `schema_version` 不认识，则用 `payload.blocks` 走本地映射。勿对 `props.markdown` 等字段盲目 `dangerouslySetInnerHTML`，除非另有可信 sanitize。
 
 ### 4. 从 Eino `schema.Message` 解析
 

@@ -1,0 +1,13 @@
+# 业务可复制：块类型 -> 卡片类型 + 治理元数据（与 pkg/render Parse 产出的 kind 对齐）。
+schema_version: 1
+mapping_version: "2026-04-24"
+mapping_source: "my-app/config/uimodel.yaml"
+# mapping_changed_at: "2026-04-24T12:00:00Z"
+
+block_profiles:
+  markdown:
+    card: MarkdownCard
+  thinking:
+    card: ReasoningCard
+  code:
+    card: CodeCard

@@ -36,3 +36,9 @@
 - 只关心解析、不关心呈现时，仍可用 **`OptionsFromYAML`** / **`LoadOptionsFromFile`**（忽略 `render:` / `html:`）。
 - 需要 **Parse + HTML** 时推荐 **`LoadRenderConfigFromFile`**，对 **`rc.Options`** 做 **`Parse`**，对 **`&rc.Render`** 做 **`BlocksToHTMLWithConfig`** / **`WrapDocumentWithConfig`**。
 - 更细的字段说明与表格见 **`pkg/render/README.md`**。
+
+## 路线 C：`pkg/render/uimodel`（块 → 卡片 JSON）
+
+- 新增 **`pkg/render/uimodel`**：`BuildHybridPayload`、`BuildUIModel`、`BuiltinMapping` / `LoadMappingFromFile`，以及 **`mapping_hash`**（`MappingFingerprint`）。
+- 示例映射：**`pkg/render/uimodel/config/uimodel.example.yaml`**
+- 设计说明见 **`docs/ideas/2026-04-24_前后端渲染映射规则治理方案.md`**
