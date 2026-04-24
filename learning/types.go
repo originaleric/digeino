@@ -67,14 +67,17 @@ type SkillAction struct {
 
 // LearningDecision 决策引擎输出。
 type LearningDecision struct {
-	DecisionID    string
-	RunID         string
-	SessionID     string
-	MemoryActions []MemoryAction
-	SkillActions  []SkillAction
-	Reason        string
-	Confidence    float64
-	CreatedAt     time.Time
+	DecisionID      string
+	AppName         string
+	RunID           string
+	SessionID       string
+	ExecutionID     string          // 与 RunContext 对齐，供宿主审计表幂等键
+	TerminalOutcome TerminalOutcome // 与 RunContext 对齐
+	MemoryActions   []MemoryAction
+	SkillActions    []SkillAction
+	Reason          string
+	Confidence      float64
+	CreatedAt       time.Time
 }
 
 // Phase 控制 Worker 执行到哪个阶段（与分阶段 rollout 对齐）。

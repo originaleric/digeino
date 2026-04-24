@@ -1,0 +1,33 @@
+# 示例：parse 下并列自定义键 my_tag；parse_render 下可选同名键声明为 thinking（可省略）。
+
+parse_render:
+  thinking_tag_pairs: thinking
+  code_fence: code
+  markdown: markdown
+  my_tag: thinking
+
+thinking_tag_pairs:
+  - open: "<reasoning>"
+    close: "</reasoning>"
+
+parse:
+  my_tag:
+    open: "<my-tag>"
+    close: "</my-tag>"
+
+render:
+  thinking:
+    outer: { tag: aside, class: llm-thinking }
+    inner: { tag: pre, class: llm-thinking-pre }
+  code:
+    outer: { tag: pre, class: llm-code }
+    inner:
+      tag: code
+      class: ""
+      language_class_prefix: language-
+  markdown:
+    sanitize: ugc
+  document:
+    lang: zh-CN
+    inline_css: |
+      .llm-render-doc { font-family: system-ui, sans-serif; }

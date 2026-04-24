@@ -1,0 +1,55 @@
+# pkg/render 嵌入默认配置（go:embed）。可复制到业务仓库，用 LoadRenderConfigFromFile 一次加载解析 + HTML 呈现。
+#
+# ---------------------------------------------------------------------------
+# parse_render: 三项内置映射 + 可选扩展键（与 parse 下同名键对应，值为 thinking|code|markdown）。
+# parse: 除 thinking_tag_pairs、code_fence 外，可并列写任意键名，值为 {open, close} 时自动并入思考区识别。
+# render:（原 html: 仍兼容）呈现配置。
+# ---------------------------------------------------------------------------
+schema_version: 1
+
+parse_render:
+  thinking_tag_pairs: thinking
+  code_fence: code
+  markdown: markdown
+  my_tag: thinking
+
+parse:
+  code_fence:
+    open: "```"
+    close: "```"
+  thinking_tag_pairs:
+    - open: "<think>"
+      close: "</think>"
+    - open: "<redacted_reasoning>"
+      close: "</redacted_reasoning>"
+    - open: "<reasoning>"
+      close: "</reasoning>"
+  my_tag:
+    open: "<my-tag>"
+    close: "</my-tag>"
+
+render:
+  thinking:
+    outer:
+      tag: aside
+      class: llm-thinking
+    inner:
+      tag: pre
+      class: llm-thinking-pre
+  code:
+    outer:
+      tag: pre
+      class: llm-code
+    inner:
+      tag: code
+      class: ""
+      language_class_prefix: language-
+  markdown:
+    sanitize: ugc
+  document:
+    lang: zh-CN
+    inline_css: |
+      .llm-render-doc{font-family:system-ui,sans-serif;line-height:1.5;max-width:52rem;margin:1rem auto;padding:0 1rem;}
+      .llm-thinking{opacity:0.85;border-left:3px solid #888;padding-left:0.75rem;margin:1rem 0;}
+      .llm-thinking-pre{white-space:pre-wrap;margin:0;font-size:0.9rem;}
+      .llm-code{overflow:auto;padding:0.75rem;background:#f6f8fa;border-radius:6px;}

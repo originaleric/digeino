@@ -34,14 +34,17 @@ func (e *DefaultDecisionEngine) Evaluate(ctx context.Context, rc *RunContext, cf
 	}
 
 	dec := &LearningDecision{
-		DecisionID:    uuid.New().String(),
-		RunID:         rc.RunID,
-		SessionID:     rc.SessionID,
-		Reason:        "rule_prefilter",
-		Confidence:    0.5,
-		CreatedAt:     now,
-		MemoryActions: nil,
-		SkillActions:  nil,
+		DecisionID:      uuid.New().String(),
+		AppName:         rc.AppName,
+		RunID:           rc.RunID,
+		SessionID:       rc.SessionID,
+		ExecutionID:     rc.ExecutionID,
+		TerminalOutcome: rc.TerminalOutcome,
+		Reason:          "rule_prefilter",
+		Confidence:      0.5,
+		CreatedAt:       now,
+		MemoryActions:   nil,
+		SkillActions:    nil,
 	}
 
 	if e != nil && e.LLM != nil {
@@ -68,6 +71,15 @@ func sanitizeDecision(in *LearningDecision, rc *RunContext, now time.Time) *Lear
 	}
 	if out.SessionID == "" {
 		out.SessionID = rc.SessionID
+	}
+	if out.AppName == "" {
+		out.AppName = rc.AppName
+	}
+	if out.ExecutionID == "" {
+		out.ExecutionID = rc.ExecutionID
+	}
+	if out.TerminalOutcome == "" {
+		out.TerminalOutcome = rc.TerminalOutcome
 	}
 	if out.CreatedAt.IsZero() {
 		out.CreatedAt = now
