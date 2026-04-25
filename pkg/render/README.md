@@ -5,11 +5,12 @@
 ## 子包
 
 | 路径 | 作用 |
-|------|------|
+| ------ | ------ |
 | `github.com/originaleric/digeino/pkg/render` | 核心：`Parse`、`ParseStablePrefix`、类型 — **不** `import cloudwego/eino` |
 | `github.com/originaleric/digeino/pkg/render/html` | `BlocksToHTMLWithConfig`、`WrapDocumentWithConfig`（呈现由 `config.yaml` 的 `render:` 或代码传入） |
 | `github.com/originaleric/digeino/pkg/render/eino` | `rendereino`：`schema.Message` → 文本 → `Parse` |
 | `github.com/originaleric/digeino/pkg/render/uimodel` | **路线 C**：`[]Block` → `UIModel` / `HybridPayload`（与 `blocks` 并存，供 React 卡片等消费）；映射 YAML 见 `uimodel/config/uimodel.example.yaml` |
+| `github.com/originaleric/digeino/pkg/render/template` | `rendertemplate`：业务 view model → 安全 HTML 片段（基于 `html/template`，与 `[]Block` 渲染并行） |
 
 ## 如何使用
 
@@ -34,7 +35,7 @@ full := renderhtml.WrapDocumentWithConfig("标题", body, &rc.Render)
 `thinking_tag_pairs` 行为：
 
 | YAML 中 `thinking_tag_pairs` | 效果 |
-|------------------------------|------|
+| ------------------------------ | ------ |
 | 省略或 `null` | 等价零值 `Options{}`，`Parse` 时 withDefaults 使用**嵌入**列表 |
 | `[]` 空列表 | **关闭**思考区识别 |
 
@@ -45,7 +46,7 @@ full := renderhtml.WrapDocumentWithConfig("标题", body, &rc.Render)
 **`parse:`（可选，块识别）**：把「怎么认出 code / thinking」收拢到同一段；根级 `thinking_tag_pairs` 仍可单独使用。
 
 | 键 | 含义 |
-|----|------|
+| ---- | ------ |
 | `parse.thinking_tag_pairs` | 若 YAML 里**写出**该键（含 `[]`），则**整表覆盖**根级 `thinking_tag_pairs`；省略则沿用根级 |
 | `parse.code_fence.open` / `close` | 与 `thinking_tag_pairs` 相同键名：起始行 / 闭合行前缀；省略 `close` 时默认等于 `open`。旧键 `opening` 仍可读作 `open` |
 
@@ -54,7 +55,7 @@ full := renderhtml.WrapDocumentWithConfig("标题", body, &rc.Render)
 **`render:` 小节键约定**：在默认 **`parse_render`** 下，小节名为 `thinking` / `code` / `markdown`（及固定的 `document`）。`thinking` 与 `code` 使用同一形状——`outer`、`inner`，每项为 `tag` + `class`。`markdown` 主要为 `sanitize`（goldmark 之后的 HTML 消毒）。兼容旧 YAML：`thinking` 的 `wrapper_*` / `content_*`、`code` 的 `pre_class` 等会在加载时迁到 `outer`/`inner`；`sanitize_policy` 可读作 `sanitize`。
 
 | 段 | 键 | 含义 |
-|----|-----|------|
+| ---- | ----- | ------ |
 | `thinking` | `outer` | 思考块最外层容器（如 `aside` + `llm-thinking`） |
 | `thinking` | `inner` | 内层包转义后的正文（如 `pre` + `llm-thinking-pre`） |
 | `code` | `outer` | 代码块外层（通常为 `pre` + `llm-code`） |
@@ -132,6 +133,39 @@ full := renderhtml.WrapDocumentWithConfig("标题", body, &rc.Render)
 
 **说明**：`BlocksToHTML` 只产出 **HTML 片段**（无 `<html>`/`<body>`）。`WrapDocument` 才生成整页，并把片段包在 `<div class="llm-render-doc">` 里；`document.inline_css` 里的版式请优先写 `.llm-render-doc` 与块 class（`.llm-thinking`、`.llm-code`），不要依赖 `body`，以免和「仅片段」用法混淆。
 
+### 3a. 数据模板渲染（view model → HTML 片段）
+
+当业务已经组织好 view model，并希望用项目内模板生成卡片 HTML 时，使用 `pkg/render/template`。它不参与 `Parse -> []Block -> HTML` 管线，也不读取 `render:` YAML；`render:` 仍只控制助手文本块的 HTML 呈现。
+
+```go
+import rendertemplate "github.com/originaleric/digeino/pkg/render/template"
+
+html, err := rendertemplate.RenderTemplateFromFile(
+    "strategist_card.tmpl",
+    viewModel,
+    rendertemplate.TemplateRenderOptions{
+        BaseDir: "config/templates",
+        Cache:   true,
+        Strict:  true,
+        Funcs: map[string]any{
+            "percent": formatPercent,
+        },
+    },
+)
+if err != nil {
+    return err
+}
+```
+
+安全默认：
+
+- 使用 Go 标准库 `html/template`，动态文本默认 HTML 转义。
+- `BaseDir` 会限制相对模板路径，拒绝 `../` 逃逸。
+- `Strict` 会把缺字段渲染成可捕获的执行错误。
+- `Cache` 会缓存已编译模板；文件模板按绝对路径、mtime、size、函数集与 strict 设置生成缓存键。
+
+错误可通过 `errors.As(err, &te)` 区分 `not_found`、`path`、`parse`、`execute`、`func`，其中 `te` 为 `*rendertemplate.TemplateError`，便于业务侧降级或回退本地渲染。
+
 ### 3b. 路线 C：块 → 卡片 JSON（`uimodel`）
 
 在已有 `[]render.Block` 上生成 **可选** `ui_model`，与 `blocks` 一并下发（HTTP JSON 或 SSE `done` 事件均可）。**`mapping_version` / `mapping_hash` / `mapping_source`** 便于前端按版本兼容；**`mapping_changed_at`** 可选（RFC3339）。
@@ -192,7 +226,7 @@ path, err := renderexport.SaveAssistantHTML(ctx, "chat_render/out.html", blocks,
 思考区标签建议用 **`config/config.yaml`（库内参考）或自有 `config.yml`** 维护（见上文「YAML 配置」），无需改 Go 代码即可增删厂商格式。
 
 | `BlockKind` | 含义 | 识别方式（当前实现） |
-|-------------|------|----------------------|
+| ------------- | ------ | ---------------------- |
 | `markdown` | 正文 Markdown | 与代码围栏、思考区错开后的普通文本段 |
 | `thinking` | 思考 / 推理 | 由 `Options.ThinkingTagPairs` 成对标签包住的内容（默认含 `<think>`、`<reasoning>` 等，见 `DefaultThinkingTagPairs`） |
 | `code` | 代码 | CommonMark 式围栏：起始行以 `Options.CodeFence.Open` 为前缀，闭合行以 `Close` 为前缀（默认与 `Open` 相同）；首行前缀后可带语言标识 |
