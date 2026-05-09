@@ -1,5 +1,7 @@
 package webhook
 
+import "github.com/originaleric/digeino/config"
+
 // NewConfiguredCollector 创建带默认配置注入的 StatusCollector。
 // 统一入口（HTTP/CLI/批处理）可复用此函数，避免各自拼装导致语义不一致。
 //
@@ -23,8 +25,10 @@ func NewConfiguredCollector(
 	storeEnabled := IsStoreEnabled() && store != nil
 	callbackEnabled := callback != nil
 	webhookEnabled := webhookCfg != nil
+	feishuCfg := GetFeishuAPIConfig()
+	feishuEnabled := feishuCfg != nil
 
-	if !storeEnabled && !callbackEnabled && !webhookEnabled {
+	if !storeEnabled && !callbackEnabled && !webhookEnabled && !feishuEnabled {
 		return nil
 	}
 
@@ -37,6 +41,9 @@ func NewConfiguredCollector(
 	}
 	if webhookEnabled {
 		collector.AddWebhookClient(NewWebhookClient(webhookCfg))
+	}
+	if feishuEnabled {
+		collector.AddFeishuNotifier(NewFeishuNotifier(NewFeishuClient(*feishuCfg), config.Get().Feishu.NotifyOnEvents))
 	}
 	return collector
 }

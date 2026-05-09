@@ -218,6 +218,18 @@ Agent：审查完成，发现 3 个问题：
 
 ---
 
+### 3.3 飞书 (Feishu/Lark)
+
+| 工具名称 | 功能描述 | 主要参数 |
+| :--- | :--- | :--- |
+| `send_feishu_message` | 通过飞书开放平台 API 发送文本消息。支持使用配置默认接收者，或在请求中临时覆盖接收者。 | `content`: 文本内容; `receive_id_type`: 接收者类型（可选）; `receive_ids`: 接收者ID列表（可选） |
+
+说明：
+- 入站模式参考 OpenClaw，默认 `ConnectionMode=websocket`（可切换 webhook）。
+- 出站通知统一使用 HTTP API 发送。
+
+---
+
 ---
 
 ## 4. 如何在 Go 项目中集成 (Integration Guide)

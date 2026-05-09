@@ -40,6 +40,7 @@ type StatusCollector struct {
 	startTime   time.Time
 
 	webhookClients []*WebhookClient
+	feishuNotifiers []*FeishuNotifier
 	statusStore    StatusStoreInterface
 	statusCallback func(status ExecutionStatus)
 
@@ -67,6 +68,7 @@ type sinkTask struct {
 	status ExecutionStatus
 	store  StatusStoreInterface
 	client *WebhookClient
+	feishu *FeishuNotifier
 }
 
 // DispatchStats 分发统计信息，用于运行期观测。
@@ -77,6 +79,8 @@ type DispatchStats struct {
 	StoreFailure     int64 `json:"store_failure"`
 	WebhookSuccess   int64 `json:"webhook_success"`
 	WebhookFailure   int64 `json:"webhook_failure"`
+	FeishuSuccess    int64 `json:"feishu_success"`
+	FeishuFailure    int64 `json:"feishu_failure"`
 	RetryCount       int64 `json:"retry_count"`
 	SampledOut       int64 `json:"sampled_out"`
 	PayloadCompacted int64 `json:"payload_compacted"`
@@ -143,6 +147,14 @@ func (sc *StatusCollector) AddWebhookClient(client *WebhookClient) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	sc.webhookClients = append(sc.webhookClients, client)
+	sc.ensureDispatcherLocked()
+}
+
+// AddFeishuNotifier 添加飞书通知器
+func (sc *StatusCollector) AddFeishuNotifier(notifier *FeishuNotifier) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	sc.feishuNotifiers = append(sc.feishuNotifiers, notifier)
 	sc.ensureDispatcherLocked()
 }
 
@@ -297,6 +309,7 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 	callback := sc.statusCallback
 	store := sc.statusStore
 	clients := sc.webhookClients
+	feishuNotifiers := sc.feishuNotifiers
 	sc.mu.Unlock()
 
 	// 1. 优先执行回调（SSE 等），虽然它是同步调用，但在应用端可能已实现异步
@@ -341,6 +354,16 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 				ctx:    safeCtx,
 				status: asyncStatus,
 				client: client,
+			})
+		}
+	}
+	if len(feishuNotifiers) > 0 {
+		safeCtx := detachContext(ctx)
+		for _, notifier := range feishuNotifiers {
+			sc.enqueueSinkTask(sinkTask{
+				ctx:    safeCtx,
+				status: asyncStatus,
+				feishu: notifier,
 			})
 		}
 	}
@@ -422,6 +445,10 @@ func (sc *StatusCollector) executeSinkTask(task sinkTask) {
 		if task.client != nil {
 			sinkName = "webhook"
 			err = task.client.SendStatus(task.ctx, task.status)
+		}
+		if task.feishu != nil {
+			sinkName = "feishu"
+			err = task.feishu.SendStatus(task.ctx, task.status)
 		}
 		if err == nil {
 			sc.updateSinkResultStats(sinkName, true)
@@ -530,6 +557,12 @@ func (sc *StatusCollector) updateSinkResultStats(sink string, success bool) {
 				stats.WebhookSuccess++
 			} else {
 				stats.WebhookFailure++
+			}
+		case "feishu":
+			if success {
+				stats.FeishuSuccess++
+			} else {
+				stats.FeishuFailure++
 			}
 		}
 	})

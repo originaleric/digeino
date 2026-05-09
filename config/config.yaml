@@ -40,6 +40,29 @@ Status:
     SampleRate: 100            # 非终态事件采样率（0-100），100 表示不采样
     MaxPayloadBytes: 262144    # 单条状态事件 payload 上限（字节）
 
+Feishu:
+  Enabled: false
+  ConnectionMode: "websocket"       # websocket | webhook
+  EventIngest:
+    WebsocketEnabled: true
+    WebhookEnabled: false
+    VerificationToken: ""
+    WebhookPath: "/feishu/events"
+    WebhookHost: "127.0.0.1"
+    WebhookPort: 3000
+  SendViaAPI: true
+  NotifyOnEvents: ["failed", "completed"]  # 自动通知事件（默认终态）
+  API:
+    Enabled: true
+    AppID: ""
+    AppSecret: ""
+    BaseURL: "https://open.feishu.cn"
+    Timeout: 5
+    RetryCount: 2
+    RetryDelayMs: 500
+    ReceiveIDType: "chat_id"              # chat_id | open_id | user_id | email
+    ReceiveIDs: []                        # 默认接收对象列表
+
 WeChat:
   Enabled: false                    # 是否启用微信推送功能
   AppID: ""                         # 微信服务号 AppID

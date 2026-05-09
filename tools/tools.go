@@ -9,6 +9,7 @@ import (
 	"github.com/originaleric/digeino/tools/research"
 	"github.com/originaleric/digeino/tools/research/websearch"
 	"github.com/originaleric/digeino/tools/storage"
+	"github.com/originaleric/digeino/tools/feishu"
 	"github.com/originaleric/digeino/tools/ui_ux"
 	"github.com/originaleric/digeino/tools/wx"
 )
@@ -156,6 +157,10 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	wecomCustomerMiniprogramTool, err := wx.NewWeComCustomerMiniprogramTool(ctx)
 	if err == nil {
 		tools = append(tools, wecomCustomerMiniprogramTool)
+	}
+	feishuMessageTool, err := feishu.NewFeishuMessageTool(ctx)
+	if err == nil {
+		tools = append(tools, feishuMessageTool)
 	}
 	// 3.1. 接收企业微信客服消息工具（如果已启用回调功能）
 	receiveWeComCustomerTool, err := wx.NewReceiveWeComCustomerMessageTool(ctx)

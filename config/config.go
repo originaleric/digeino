@@ -10,6 +10,7 @@ import (
 type Config struct {
 	HttpServer HttpServerConfig `yaml:"HttpServer" json:"HttpServer"`
 	Status     StatusConfig     `yaml:"Status" json:"Status"`
+	Feishu     FeishuConfig     `yaml:"Feishu" json:"Feishu"`
 	WeChat     WeChatConfig     `yaml:"WeChat" json:"WeChat"`
 	WeCom      WeComConfig      `yaml:"WeCom" json:"WeCom"`
 	ChatModel  ChatModelConfig  `yaml:"ChatModel" json:"ChatModel"`
@@ -85,6 +86,39 @@ type WebhookConfig struct {
 	RetryCount int               `yaml:"retry_count" json:"retry_count,omitempty"`
 	RetryDelay int               `yaml:"retry_delay" json:"retry_delay,omitempty"`
 	Events     []string          `yaml:"events" json:"events,omitempty"`
+}
+
+// FeishuConfig 飞书配置（参考 OpenClaw：入站默认 websocket，出站统一 API）
+type FeishuConfig struct {
+	Enabled        *bool               `yaml:"Enabled" json:"Enabled,omitempty"`
+	ConnectionMode string              `yaml:"ConnectionMode" json:"ConnectionMode,omitempty"` // websocket | webhook
+	EventIngest    FeishuIngestConfig  `yaml:"EventIngest" json:"EventIngest"`
+	SendViaAPI     *bool               `yaml:"SendViaAPI" json:"SendViaAPI,omitempty"`
+	NotifyOnEvents []string            `yaml:"NotifyOnEvents" json:"NotifyOnEvents,omitempty"`
+	API            FeishuAPIConfig     `yaml:"API" json:"API"`
+}
+
+// FeishuIngestConfig 飞书入站接入配置
+type FeishuIngestConfig struct {
+	WebsocketEnabled *bool  `yaml:"WebsocketEnabled" json:"WebsocketEnabled,omitempty"`
+	WebhookEnabled   *bool  `yaml:"WebhookEnabled" json:"WebhookEnabled,omitempty"`
+	VerificationToken string `yaml:"VerificationToken" json:"VerificationToken,omitempty"`
+	WebhookPath      string `yaml:"WebhookPath" json:"WebhookPath,omitempty"`
+	WebhookHost      string `yaml:"WebhookHost" json:"WebhookHost,omitempty"`
+	WebhookPort      int    `yaml:"WebhookPort" json:"WebhookPort,omitempty"`
+}
+
+// FeishuAPIConfig 飞书开放平台 API 配置
+type FeishuAPIConfig struct {
+	Enabled       *bool    `yaml:"Enabled" json:"Enabled,omitempty"`
+	AppID         string   `yaml:"AppID" json:"AppID,omitempty"`
+	AppSecret     string   `yaml:"AppSecret" json:"AppSecret,omitempty"`
+	BaseURL       string   `yaml:"BaseURL" json:"BaseURL,omitempty"` // https://open.feishu.cn 或 https://open.larksuite.com
+	Timeout       int      `yaml:"Timeout" json:"Timeout,omitempty"`
+	RetryCount    int      `yaml:"RetryCount" json:"RetryCount,omitempty"`
+	RetryDelayMs  int      `yaml:"RetryDelayMs" json:"RetryDelayMs,omitempty"`
+	ReceiveIDType string   `yaml:"ReceiveIDType" json:"ReceiveIDType,omitempty"` // chat_id | open_id | user_id | email
+	ReceiveIDs    []string `yaml:"ReceiveIDs" json:"ReceiveIDs,omitempty"`
 }
 
 // StatusStoreConfig 状态存储配置
@@ -338,6 +372,8 @@ func Default() *Config {
 	wechatDisabled := false
 	historyEnabled := true
 	dataFlowDisabled := false
+	feishuDisabled := false
+	feishuEnabled := true
 	return &Config{
 		HttpServer: HttpServerConfig{
 			Api: struct {
@@ -369,6 +405,28 @@ func Default() *Config {
 			Event: StatusEventConfig{
 				SampleRate:      100,
 				MaxPayloadBytes: 262144,
+			},
+		},
+		Feishu: FeishuConfig{
+			Enabled:        &feishuDisabled,
+			ConnectionMode: "websocket",
+			EventIngest: FeishuIngestConfig{
+				WebsocketEnabled: &feishuEnabled,
+				WebhookEnabled:   &feishuDisabled,
+				WebhookPath:      "/feishu/events",
+				WebhookHost:      "127.0.0.1",
+				WebhookPort:      3000,
+			},
+			SendViaAPI:     &feishuEnabled,
+			NotifyOnEvents: []string{"failed", "completed"},
+			API: FeishuAPIConfig{
+				Enabled:       &feishuEnabled,
+				BaseURL:       "https://open.feishu.cn",
+				Timeout:       5,
+				RetryCount:    2,
+				RetryDelayMs:  500,
+				ReceiveIDType: "chat_id",
+				ReceiveIDs:    []string{},
 			},
 		},
 		WeChat: WeChatConfig{

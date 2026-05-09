@@ -67,3 +67,35 @@ func BuildDefaultWebhookURL(scheme, host string) string {
 
 	return fmt.Sprintf("%s://%s/api/v1/webhook/status", scheme, host)
 }
+
+// GetFeishuAPIConfig 获取飞书 API 配置（仅用于消息发送）。
+func GetFeishuAPIConfig() *config.FeishuAPIConfig {
+	cfg := config.Get().Feishu
+	if cfg.Enabled != nil && !*cfg.Enabled {
+		return nil
+	}
+	if cfg.SendViaAPI != nil && !*cfg.SendViaAPI {
+		return nil
+	}
+
+	apiCfg := cfg.API
+	if apiCfg.Enabled != nil && !*apiCfg.Enabled {
+		return nil
+	}
+	if strings.TrimSpace(apiCfg.BaseURL) == "" {
+		apiCfg.BaseURL = "https://open.feishu.cn"
+	}
+	if apiCfg.Timeout <= 0 {
+		apiCfg.Timeout = 5
+	}
+	if apiCfg.RetryDelayMs <= 0 {
+		apiCfg.RetryDelayMs = 500
+	}
+	if apiCfg.ReceiveIDType == "" {
+		apiCfg.ReceiveIDType = "chat_id"
+	}
+	if strings.TrimSpace(apiCfg.AppID) == "" || strings.TrimSpace(apiCfg.AppSecret) == "" {
+		return nil
+	}
+	return &apiCfg
+}
