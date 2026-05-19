@@ -21,4 +21,7 @@
 logs/
 storage/app/uploaded/
 .specstory/
+.vscode/
+.cursorindexingignore
+docs/
 .DS_Store
