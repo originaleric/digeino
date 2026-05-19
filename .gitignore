@@ -20,4 +20,5 @@
 # Project specific
 logs/
 storage/app/uploaded/
+.specstory/
 .DS_Store

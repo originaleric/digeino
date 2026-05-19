@@ -2,6 +2,40 @@ HttpServer:
   Api:
     Port: ":20201"
 
+# DigEino Agent Plugin Runtime / HTTP Tool Gateway
+Gateway:
+  Enabled: false
+  ListenAddr: ":8787"
+  InstanceID: "digeino-local"
+  AuthToken: "" # 非空时要求 Bearer 或 X-Digeino-Token
+  AllowedTools:
+    - browser.browse
+    - browser.snapshot
+    - browser.action
+    - wechat.article.read
+    # - file.read   # 需配置 AllowedReadPaths
+  AllowedReadPaths: []
+  ArtifactEnabled: true
+  ArtifactDir: "storage/app/gateway_artifacts"
+  ArtifactTTLMinutes: 60
+
+# DigEino 本地 Collector（WebSocket 反向连接）
+Collector:
+  ServerURL: "" # 例如 https://knowledge.example.com
+  WSPath: "/digeino/v1/collector/ws"
+  Token: ""
+  InstanceID: "collector_local_001"
+  HeartbeatIntervalSec: 30
+  PullIntervalSec: 0      # >0 时启用拉取模式；0 仅推送
+  PullBatchSize: 1
+  ReconnectDelaySec: 5
+  MaxConcurrentCalls: 1   # 公众号采集建议 1
+  AllowedTools:
+    - browser.browse
+    - browser.snapshot
+    - browser.action
+    - wechat.article.read
+
 # PostRun 自进化学习（默认关闭；宿主需注册 learning.Host）
 Learning:
   Enabled: false

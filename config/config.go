@@ -9,6 +9,8 @@ import (
 // Config 根配置结构
 type Config struct {
 	HttpServer HttpServerConfig `yaml:"HttpServer" json:"HttpServer"`
+	Gateway    GatewayConfig    `yaml:"Gateway" json:"Gateway"`
+	Collector  CollectorConfig  `yaml:"Collector" json:"Collector"`
 	Status     StatusConfig     `yaml:"Status" json:"Status"`
 	Feishu     FeishuConfig     `yaml:"Feishu" json:"Feishu"`
 	WeChat     WeChatConfig     `yaml:"WeChat" json:"WeChat"`
@@ -24,6 +26,33 @@ type HttpServerConfig struct {
 	Api struct {
 		Port string `yaml:"Port" json:"Port"`
 	} `yaml:"Api" json:"Api"`
+}
+
+// GatewayConfig DigEino Agent Plugin Runtime / HTTP Tool Gateway 配置。
+type GatewayConfig struct {
+	Enabled            *bool    `yaml:"Enabled" json:"Enabled,omitempty"`
+	ListenAddr         string   `yaml:"ListenAddr" json:"ListenAddr,omitempty"`
+	InstanceID         string   `yaml:"InstanceID" json:"InstanceID,omitempty"`
+	AuthToken          string   `yaml:"AuthToken" json:"AuthToken,omitempty"`
+	AllowedTools       []string `yaml:"AllowedTools" json:"AllowedTools,omitempty"`
+	AllowedReadPaths   []string `yaml:"AllowedReadPaths" json:"AllowedReadPaths,omitempty"`
+	ArtifactEnabled    *bool    `yaml:"ArtifactEnabled" json:"ArtifactEnabled,omitempty"`
+	ArtifactDir        string   `yaml:"ArtifactDir" json:"ArtifactDir,omitempty"`
+	ArtifactTTLMinutes int      `yaml:"ArtifactTTLMinutes" json:"ArtifactTTLMinutes,omitempty"`
+}
+
+// CollectorConfig 本地 Collector（WebSocket 反向连接）配置。
+type CollectorConfig struct {
+	ServerURL            string   `yaml:"ServerURL" json:"ServerURL,omitempty"`
+	WSPath               string   `yaml:"WSPath" json:"WSPath,omitempty"`
+	Token                string   `yaml:"Token" json:"Token,omitempty"`
+	InstanceID           string   `yaml:"InstanceID" json:"InstanceID,omitempty"`
+	HeartbeatIntervalSec int      `yaml:"HeartbeatIntervalSec" json:"HeartbeatIntervalSec,omitempty"`
+	PullIntervalSec      int      `yaml:"PullIntervalSec" json:"PullIntervalSec,omitempty"`
+	PullBatchSize        int      `yaml:"PullBatchSize" json:"PullBatchSize,omitempty"`
+	ReconnectDelaySec    int      `yaml:"ReconnectDelaySec" json:"ReconnectDelaySec,omitempty"`
+	MaxConcurrentCalls   int      `yaml:"MaxConcurrentCalls" json:"MaxConcurrentCalls,omitempty"`
+	AllowedTools         []string `yaml:"AllowedTools" json:"AllowedTools,omitempty"`
 }
 
 // StatusConfig 状态相关配置：包含 Webhook、Store 与 DataFlow
@@ -380,6 +409,32 @@ func Default() *Config {
 				Port string `yaml:"Port" json:"Port"`
 			}{
 				Port: ":20201",
+			},
+		},
+		Gateway: GatewayConfig{
+			Enabled:    &disabled,
+			ListenAddr: ":8787",
+			InstanceID: "digeino-local",
+			AllowedTools: []string{
+				"browser.browse",
+				"browser.snapshot",
+				"browser.action",
+				"wechat.article.read",
+			},
+			ArtifactEnabled:    &enabled,
+			ArtifactDir:        "storage/app/gateway_artifacts",
+			ArtifactTTLMinutes: 60,
+		},
+		Collector: CollectorConfig{
+			WSPath:               "/digeino/v1/collector/ws",
+			HeartbeatIntervalSec: 30,
+			PullIntervalSec:      0,
+			PullBatchSize:        1,
+			ReconnectDelaySec:    5,
+			MaxConcurrentCalls:   1,
+			AllowedTools: []string{
+				"browser.browse",
+				"wechat.article.read",
 			},
 		},
 		Status: StatusConfig{
