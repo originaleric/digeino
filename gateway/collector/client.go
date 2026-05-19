@@ -13,6 +13,10 @@ import (
 	"github.com/originaleric/digeino/gateway/runtime"
 )
 
+// envelopeWriter serializes all outbound WebSocket text frames through one mutex.
+// gorilla/websocket does not permit concurrent Conn.WriteMessage.
+type envelopeWriter func(env protocol.Envelope) error
+
 // Client maintains a reverse WebSocket connection to a host and executes tool calls.
 type Client struct {
 	opts    Options
@@ -69,7 +73,24 @@ func (c *Client) connectOnce(ctx context.Context) error {
 	sessionCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if err := c.handshake(sessionCtx, conn); err != nil {
+	var writeMu sync.Mutex
+	writeEnv := envelopeWriter(func(env protocol.Envelope) error {
+		data, encErr := env.Encode()
+		if encErr != nil {
+			return encErr
+		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		return conn.WriteMessage(websocket.TextMessage, data)
+	})
+
+	writeRaw := func(msgType int, payload []byte) error {
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		return conn.WriteMessage(msgType, payload)
+	}
+
+	if err := c.handshake(sessionCtx, conn, writeEnv); err != nil {
 		return err
 	}
 
@@ -79,20 +100,21 @@ func (c *Client) connectOnce(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- c.readLoop(sessionCtx, conn, sem, &wg)
+		errCh <- c.readLoop(sessionCtx, conn, writeEnv, sem, &wg)
 	}()
 
 	if c.opts.HeartbeatInterval > 0 {
-		go c.heartbeatLoop(sessionCtx, conn)
+		go c.heartbeatLoop(sessionCtx, writeEnv)
 	}
 	if c.opts.PullInterval > 0 {
-		go c.pullLoop(sessionCtx, conn)
+		go c.pullLoop(sessionCtx, writeEnv)
 	}
 
 	select {
 	case <-ctx.Done():
 		cancel()
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = writeRaw(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		return ctx.Err()
 	case err := <-errCh:
 		cancel()
@@ -100,9 +122,9 @@ func (c *Client) connectOnce(ctx context.Context) error {
 	}
 }
 
-func (c *Client) handshake(ctx context.Context, conn *websocket.Conn) error {
+func (c *Client) handshake(_ context.Context, conn *websocket.Conn, writeEnv envelopeWriter) error {
 	hello := protocol.NewCollectorHello(c.opts.InstanceID, gwversion.RuntimeName, gwversion.RuntimeVersion)
-	if err := writeEnvelope(conn, hello); err != nil {
+	if err := writeEnv(hello); err != nil {
 		return err
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(30 * time.Second))
@@ -128,14 +150,14 @@ func (c *Client) handshake(ctx context.Context, conn *websocket.Conn) error {
 	}
 
 	manifest := c.rt.Manifest()
-	if err := writeEnvelope(conn, protocol.NewCollectorManifest(manifest)); err != nil {
+	if err := writeEnv(protocol.NewCollectorManifest(manifest)); err != nil {
 		return err
 	}
 	status := protocol.NewInstanceStatus(c.opts.InstanceID, "online", 0)
-	return writeEnvelope(conn, status)
+	return writeEnv(status)
 }
 
-func (c *Client) heartbeatLoop(ctx context.Context, conn *websocket.Conn) {
+func (c *Client) heartbeatLoop(ctx context.Context, writeEnv envelopeWriter) {
 	ticker := time.NewTicker(c.opts.HeartbeatInterval)
 	defer ticker.Stop()
 	for {
@@ -149,14 +171,14 @@ func (c *Client) heartbeatLoop(ctx context.Context, conn *websocket.Conn) {
 				busy = "busy"
 			}
 			env := protocol.NewInstanceStatus(c.opts.InstanceID, busy, active)
-			if err := writeEnvelope(conn, env); err != nil {
+			if err := writeEnv(env); err != nil {
 				return
 			}
 		}
 	}
 }
 
-func (c *Client) pullLoop(ctx context.Context, conn *websocket.Conn) {
+func (c *Client) pullLoop(ctx context.Context, writeEnv envelopeWriter) {
 	ticker := time.NewTicker(c.opts.PullInterval)
 	defer ticker.Stop()
 	for {
@@ -167,14 +189,14 @@ func (c *Client) pullLoop(ctx context.Context, conn *websocket.Conn) {
 			if c.activeCalls.Load() >= int32(c.opts.MaxConcurrentCalls) {
 				continue
 			}
-			if err := writeEnvelope(conn, protocol.NewPullTasks(c.opts.PullBatchSize)); err != nil {
+			if err := writeEnv(protocol.NewPullTasks(c.opts.PullBatchSize)); err != nil {
 				return
 			}
 		}
 	}
 }
 
-func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn, sem chan struct{}, wg *sync.WaitGroup) error {
+func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn, writeEnv envelopeWriter, sem chan struct{}, wg *sync.WaitGroup) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -190,28 +212,27 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn, sem chan st
 			c.log.Printf("[collector] invalid envelope: %v", err)
 			continue
 		}
-		if err := c.dispatch(ctx, conn, env, sem, wg); err != nil {
+		if err := c.dispatch(ctx, writeEnv, env, sem, wg); err != nil {
 			return err
 		}
 	}
 }
 
-func (c *Client) dispatch(ctx context.Context, conn *websocket.Conn, env protocol.Envelope, sem chan struct{}, wg *sync.WaitGroup) error {
+func (c *Client) dispatch(ctx context.Context, writeEnv envelopeWriter, env protocol.Envelope, sem chan struct{}, wg *sync.WaitGroup) error {
 	switch env.Type {
 	case protocol.TypePing:
-		return writeEnvelope(conn, protocol.Envelope{Type: protocol.TypePong})
+		return writeEnv(protocol.Envelope{Type: protocol.TypePong})
 	case protocol.TypePong, protocol.TypeCollectorHelloAck:
 		return nil
 	case protocol.TypeToolCall:
 		if env.ToolCall == nil {
 			return nil
 		}
-		c.scheduleCall(ctx, conn, *env.ToolCall, sem, wg)
+		c.scheduleCall(ctx, writeEnv, *env.ToolCall, sem, wg)
 		return nil
 	case protocol.TypePullTasksAck:
 		for i := range env.Calls {
-			call := env.Calls[i]
-			c.scheduleCall(ctx, conn, call, sem, wg)
+			c.scheduleCall(ctx, writeEnv, env.Calls[i], sem, wg)
 		}
 		return nil
 	case protocol.TypeWireError:
@@ -224,7 +245,7 @@ func (c *Client) dispatch(ctx context.Context, conn *websocket.Conn, env protoco
 	}
 }
 
-func (c *Client) scheduleCall(ctx context.Context, conn *websocket.Conn, call protocol.ToolCall, sem chan struct{}, wg *sync.WaitGroup) {
+func (c *Client) scheduleCall(ctx context.Context, writeEnv envelopeWriter, call protocol.ToolCall, sem chan struct{}, wg *sync.WaitGroup) {
 	select {
 	case sem <- struct{}{}:
 	default:
@@ -238,18 +259,18 @@ func (c *Client) scheduleCall(ctx context.Context, conn *websocket.Conn, call pr
 				Message: "collector at max concurrent calls",
 			},
 		}
-		_ = writeEnvelope(conn, protocol.NewToolResultEnvelope(res))
+		_ = writeEnv(protocol.NewToolResultEnvelope(res))
 		return
 	}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer func() { <-sem }()
-		c.executeAndReply(ctx, conn, call)
+		c.executeAndReply(ctx, writeEnv, call)
 	}()
 }
 
-func (c *Client) executeAndReply(ctx context.Context, conn *websocket.Conn, call protocol.ToolCall) {
+func (c *Client) executeAndReply(ctx context.Context, writeEnv envelopeWriter, call protocol.ToolCall) {
 	if call.Type == "" {
 		call.Type = protocol.TypeToolCall
 	}
@@ -264,7 +285,7 @@ func (c *Client) executeAndReply(ctx context.Context, conn *websocket.Conn, call
 				Message: "rate limit cooldown active",
 			},
 		}
-		_ = writeEnvelope(conn, protocol.NewToolResultEnvelope(res))
+		_ = writeEnv(protocol.NewToolResultEnvelope(res))
 		return
 	}
 
@@ -273,7 +294,7 @@ func (c *Client) executeAndReply(ctx context.Context, conn *websocket.Conn, call
 	defer c.limiter.Touch(key)
 
 	result := c.rt.Execute(ctx, &call)
-	if err := writeEnvelope(conn, protocol.NewToolResultEnvelope(*result)); err != nil {
+	if err := writeEnv(protocol.NewToolResultEnvelope(*result)); err != nil {
 		c.log.Printf("[collector] failed to send result for %s: %v", call.ID, err)
 	}
 }
