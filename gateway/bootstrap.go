@@ -33,7 +33,10 @@ func NewRegistry(cfg *config.Config, opts RegistryOptions) *registry.Registry {
 	reg.Register(executor.BrowserBrowseEntry(domains, store))
 	reg.Register(executor.BrowserSnapshotEntry(domains))
 	reg.Register(executor.BrowserActionEntry(domains))
-	reg.Register(executor.WechatArticleReadEntry(domains))
+	reg.Register(executor.WechatArticleReadEntry(domains, store))
+	reg.Register(executor.XiaohongshuNoteReadEntry(domains, store))
+	reg.Register(executor.DouyinVideoReadEntry(domains, store))
+	reg.Register(executor.XPostReadEntry(domains, store))
 	if len(readPaths) > 0 {
 		reg.Register(executor.FileReadEntry(readPaths))
 	}

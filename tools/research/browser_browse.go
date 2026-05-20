@@ -31,6 +31,8 @@ type BrowserBrowseRequest struct {
 	WaitSelector    string `json:"wait_selector,omitempty" jsonschema:"description=可选 CSS 选择器，等待目标元素出现后再提取"`
 	ContentSelector string `json:"content_selector,omitempty" jsonschema:"description=可选 CSS 选择器，指定提取内容的范围（mode=full时有效）"`
 	UseCookieDomain string `json:"use_cookie_domain,omitempty" jsonschema:"description=可选 Cookie 域名（如 weixin.qq.com），用于加载并复用该域的 Cookie"`
+	// MetadataScript 可选：页面加载后执行的 JS 表达式，应返回可 JSON 序列化的对象（平台结构化字段提取）。
+	MetadataScript string `json:"metadata_script,omitempty" jsonschema:"description=可选 JS 表达式，返回 JSON 对象作为 metadata"`
 }
 
 // BrowserBrowseResponse 本地浏览器抓取响应
@@ -42,7 +44,8 @@ type BrowserBrowseResponse struct {
 	Markdown       string   `json:"markdown,omitempty" jsonschema:"description=转换后的正文 Markdown"`
 	ScreenshotBase string   `json:"screenshot_base64,omitempty" jsonschema:"description=页面截图 base64（action=screenshot 时返回）"`
 	Elements       []AXNode `json:"elements,omitempty" jsonschema:"description=可交互元素列表（mode=snapshot时返回）"`
-	Summary        string   `json:"summary,omitempty" jsonschema:"description=页面摘要（mode=summary时返回）"`
+	Summary        string         `json:"summary,omitempty" jsonschema:"description=页面摘要（mode=summary时返回）"`
+	Metadata       map[string]any `json:"metadata,omitempty" jsonschema:"description=MetadataScript 提取的结构化字段"`
 }
 
 // BrowserBrowse 使用本地 go-rod 浏览器读取动态页面或截图
@@ -170,11 +173,40 @@ func BrowserBrowse(ctx context.Context, req *BrowserBrowseRequest) (*BrowserBrow
 	if cookieDomain == "" {
 		cookieDomain = targetURL.Hostname()
 	}
+	if script := strings.TrimSpace(req.MetadataScript); script != "" {
+		if meta, err := evalPageMetadata(page, script); err == nil && len(meta) > 0 {
+			resp.Metadata = meta
+		}
+	}
+
 	if err := saveDomainCookies(page, cookieDomain, cfg.CookieStoreDir, targetURL); err != nil {
 		return resp, fmt.Errorf("页面抓取成功，但保存 Cookie 失败: %w", err)
 	}
 
 	return resp, nil
+}
+
+func evalPageMetadata(page *rod.Page, script string) (map[string]any, error) {
+	result, err := page.Eval(script)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, fmt.Errorf("metadata script returned nil")
+	}
+	jsonVal, err := page.ObjectToJSON(result)
+	if err != nil {
+		return nil, err
+	}
+	raw := strings.TrimSpace(jsonVal.Str())
+	if raw == "" {
+		return nil, fmt.Errorf("metadata script returned empty")
+	}
+	var meta map[string]any
+	if err := json.Unmarshal([]byte(raw), &meta); err != nil {
+		return nil, fmt.Errorf("metadata is not a JSON object: %w", err)
+	}
+	return meta, nil
 }
 
 func validateURL(rawURL string) (*url.URL, error) {

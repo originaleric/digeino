@@ -29,7 +29,7 @@
 | 层级 | 路径 | 说明 |
 |------|------|------|
 | Legacy 实现 | `tools/<pkg>/` | 原有业务函数，如 `research.BrowserBrowse` |
-| Gateway 包装 | `gateway/executor/<name>.go` | 一个文件一个网关工具族 |
+| Gateway 包装 | `gateway/executor/<name>.go` | 一个文件一个网关工具族；**使用说明**见 [`executor/README.md`](executor/README.md) |
 | 注册 | `gateway/bootstrap.go` | `NewRegistry()` 里 `reg.Register(...)` |
 | 协议类型 | `gateway/protocol/` | `ToolCall` / `ToolResult`，一般不用改 |
 

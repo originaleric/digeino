@@ -13,6 +13,9 @@ Gateway:
     - browser.snapshot
     - browser.action
     - wechat.article.read
+    - xiaohongshu.note.read
+    - douyin.video.read
+    - x.post.read
     # - file.read   # 需配置 AllowedReadPaths
   AllowedReadPaths: []
   ArtifactEnabled: true
@@ -35,6 +38,9 @@ Collector:
     - browser.snapshot
     - browser.action
     - wechat.article.read
+    - xiaohongshu.note.read
+    - douyin.video.read
+    - x.post.read
 
 # PostRun 自进化学习（默认关闭；宿主需注册 learning.Host）
 Learning:
@@ -199,7 +205,15 @@ Tools:
     TotalTimeoutSec: 60
     NavigateTimeoutSec: 30
     WaitSelectorTimeoutSec: 20
-    AllowedDomains: [] # 为空表示不限制；生产环境建议显式配置白名单
+    AllowedDomains: [] # 为空表示不限制；生产环境建议显式配置白名单，例如：
+    # - mp.weixin.qq.com
+    # - xiaohongshu.com
+    # - www.xiaohongshu.com
+    # - douyin.com
+    # - www.douyin.com
+    # - iesdouyin.com
+    # - x.com
+    # - twitter.com
     ChromePath: "" # 可选：自定义 Chromium 可执行文件路径
     Headless: true
     CookieStoreDir: "storage/app/browser_cookies"
