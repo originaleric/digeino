@@ -6,6 +6,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
+	"github.com/originaleric/digeino/tools/ocr"
 	"github.com/originaleric/digeino/tools/research"
 	"github.com/originaleric/digeino/tools/research/websearch"
 	"github.com/originaleric/digeino/tools/storage"
@@ -188,6 +189,10 @@ func BaseTools(ctx context.Context) ([]tool.BaseTool, error) {
 	webSearchTool, err := websearch.NewWebSearchTool(ctx)
 	if err == nil {
 		tools = append(tools, webSearchTool)
+	}
+	imageOCRTool, err := ocr.NewImageOCRTool(ctx)
+	if err == nil {
+		tools = append(tools, imageOCRTool)
 	}
 	semanticSearchTool, err := research.NewSemanticSearchTool(ctx)
 	if err == nil {

@@ -264,6 +264,32 @@ type ToolsConfig struct {
 	Pinecone     PineconeConfig     `yaml:"Pinecone" json:"Pinecone"`
 	Embedding    EmbeddingConfig    `yaml:"Embedding" json:"Embedding"`
 	LocalBrowser LocalBrowserConfig `yaml:"LocalBrowser" json:"LocalBrowser"`
+	OCR          OCRConfig          `yaml:"OCR" json:"OCR"`
+}
+
+// OCRConfig 图片 OCR 大模型配置。
+type OCRConfig struct {
+	Enabled               *bool              `yaml:"Enabled" json:"Enabled,omitempty"`
+	Provider              string             `yaml:"Provider" json:"Provider"` // deepseek-ocr
+	DeepSeek              DeepSeekOCRConfig  `yaml:"DeepSeek" json:"DeepSeek"`
+	MaxImageBytes         int                `yaml:"MaxImageBytes" json:"MaxImageBytes"`
+	AllowedMimeTypes      []string           `yaml:"AllowedMimeTypes" json:"AllowedMimeTypes"`
+	AllowedFilePaths      []string           `yaml:"AllowedFilePaths" json:"AllowedFilePaths"`
+	AllowedImageDomains   []string           `yaml:"AllowedImageDomains" json:"AllowedImageDomains"`
+	BlockPrivateNetworks  *bool              `yaml:"BlockPrivateNetworks" json:"BlockPrivateNetworks,omitempty"`
+	URLDownloadTimeoutSec int                `yaml:"URLDownloadTimeoutSec" json:"URLDownloadTimeoutSec"`
+	TimeoutSec            int                `yaml:"TimeoutSec" json:"TimeoutSec"`
+	RetryCount            int                `yaml:"RetryCount" json:"RetryCount"`
+	RetryDelayMs          int                `yaml:"RetryDelayMs" json:"RetryDelayMs"`
+}
+
+// DeepSeekOCRConfig DeepSeek-OCR 适配器配置。
+type DeepSeekOCRConfig struct {
+	ApiKey      string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl     string `yaml:"BaseUrl" json:"BaseUrl"`
+	Model       string `yaml:"Model" json:"Model"`
+	Mode        string `yaml:"Mode" json:"Mode"`           // chat | ocr_endpoint
+	OCREndpoint string `yaml:"OCREndpoint" json:"OCREndpoint"` // 默认 /v1/ocr，用于自托管
 }
 
 // LocalBrowserConfig 本地浏览器抓取配置
@@ -566,6 +592,21 @@ func Default() *Config {
 				ChromePath:             "",
 				Headless:               &enabled,
 				CookieStoreDir:         "storage/app/browser_cookies",
+			},
+			OCR: OCRConfig{
+				Enabled:              &disabled,
+				Provider:             "deepseek-ocr",
+				MaxImageBytes:        10 * 1024 * 1024,
+				BlockPrivateNetworks: &enabled,
+				URLDownloadTimeoutSec: 30,
+				TimeoutSec:           120,
+				RetryCount:           1,
+				RetryDelayMs:         500,
+				DeepSeek: DeepSeekOCRConfig{
+					BaseUrl: "https://api.deepseek.com",
+					Model:   "deepseek-ocr",
+					Mode:    "chat",
+				},
 			},
 		},
 		Learning: LearningConfig{

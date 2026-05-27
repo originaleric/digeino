@@ -19,6 +19,7 @@
 
 # Project specific
 logs/
+storage/app/
 storage/app/uploaded/
 .specstory/
 .vscode/
