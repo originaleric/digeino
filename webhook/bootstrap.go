@@ -27,8 +27,10 @@ func NewConfiguredCollector(
 	webhookEnabled := webhookCfg != nil
 	feishuCfg := GetFeishuAPIConfig()
 	feishuEnabled := feishuCfg != nil
+	weChatEnabled := GetWeChatConfig() != nil
+	weComEnabled := GetWeComConfig() != nil
 
-	if !storeEnabled && !callbackEnabled && !webhookEnabled && !feishuEnabled {
+	if !storeEnabled && !callbackEnabled && !webhookEnabled && !feishuEnabled && !weChatEnabled && !weComEnabled {
 		return nil
 	}
 
@@ -43,7 +45,13 @@ func NewConfiguredCollector(
 		collector.AddWebhookClient(NewWebhookClient(webhookCfg))
 	}
 	if feishuEnabled {
-		collector.AddFeishuNotifier(NewFeishuNotifier(NewFeishuClient(*feishuCfg), config.Get().Feishu.NotifyOnEvents))
+		collector.AddNotifier(NewFeishuNotifier(NewFeishuClient(*feishuCfg), config.Get().Feishu.NotifyOnEvents))
+	}
+	if weChatEnabled {
+		collector.AddNotifier(NewWeChatNotifier(config.Get().WeChat.NotifyOnEvents))
+	}
+	if weComEnabled {
+		collector.AddNotifier(NewWeComNotifier(config.Get().WeCom.NotifyOnEvents))
 	}
 	return collector
 }

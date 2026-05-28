@@ -72,13 +72,13 @@ type DataFlowConfig struct {
 
 // LearningConfig PostRun 自进化学习（默认关闭；由宿主注册 learning.Host 后启用）。
 type LearningConfig struct {
-	Enabled              bool   `yaml:"Enabled" json:"Enabled,omitempty"`
-	Async                bool   `yaml:"Async" json:"Async,omitempty"`
-	MemoryNudgeInterval  int    `yaml:"MemoryNudgeInterval" json:"MemoryNudgeInterval,omitempty"`
-	SkillNudgeInterval   int    `yaml:"SkillNudgeInterval" json:"SkillNudgeInterval,omitempty"`
-	MinToolCallsForSkill int    `yaml:"MinToolCallsForSkill" json:"MinToolCallsForSkill,omitempty"`
-	MinConfidence        float64 `yaml:"MinConfidence" json:"MinConfidence,omitempty"`
-	PatchFirst           bool   `yaml:"PatchFirst" json:"PatchFirst,omitempty"`
+	Enabled              bool                `yaml:"Enabled" json:"Enabled,omitempty"`
+	Async                bool                `yaml:"Async" json:"Async,omitempty"`
+	MemoryNudgeInterval  int                 `yaml:"MemoryNudgeInterval" json:"MemoryNudgeInterval,omitempty"`
+	SkillNudgeInterval   int                 `yaml:"SkillNudgeInterval" json:"SkillNudgeInterval,omitempty"`
+	MinToolCallsForSkill int                 `yaml:"MinToolCallsForSkill" json:"MinToolCallsForSkill,omitempty"`
+	MinConfidence        float64             `yaml:"MinConfidence" json:"MinConfidence,omitempty"`
+	PatchFirst           bool                `yaml:"PatchFirst" json:"PatchFirst,omitempty"`
 	Retry                LearningRetryConfig `yaml:"Retry" json:"Retry"`
 	// ExecutionPhase 0=仅审计 1=+memory 2=+skill（与 learning.Phase 对齐）
 	ExecutionPhase int `yaml:"ExecutionPhase" json:"ExecutionPhase,omitempty"`
@@ -119,22 +119,22 @@ type WebhookConfig struct {
 
 // FeishuConfig 飞书配置（参考 OpenClaw：入站默认 websocket，出站统一 API）
 type FeishuConfig struct {
-	Enabled        *bool               `yaml:"Enabled" json:"Enabled,omitempty"`
-	ConnectionMode string              `yaml:"ConnectionMode" json:"ConnectionMode,omitempty"` // websocket | webhook
-	EventIngest    FeishuIngestConfig  `yaml:"EventIngest" json:"EventIngest"`
-	SendViaAPI     *bool               `yaml:"SendViaAPI" json:"SendViaAPI,omitempty"`
-	NotifyOnEvents []string            `yaml:"NotifyOnEvents" json:"NotifyOnEvents,omitempty"`
-	API            FeishuAPIConfig     `yaml:"API" json:"API"`
+	Enabled        *bool              `yaml:"Enabled" json:"Enabled,omitempty"`
+	ConnectionMode string             `yaml:"ConnectionMode" json:"ConnectionMode,omitempty"` // websocket | webhook
+	EventIngest    FeishuIngestConfig `yaml:"EventIngest" json:"EventIngest"`
+	SendViaAPI     *bool              `yaml:"SendViaAPI" json:"SendViaAPI,omitempty"`
+	NotifyOnEvents []string           `yaml:"NotifyOnEvents" json:"NotifyOnEvents,omitempty"`
+	API            FeishuAPIConfig    `yaml:"API" json:"API"`
 }
 
 // FeishuIngestConfig 飞书入站接入配置
 type FeishuIngestConfig struct {
-	WebsocketEnabled *bool  `yaml:"WebsocketEnabled" json:"WebsocketEnabled,omitempty"`
-	WebhookEnabled   *bool  `yaml:"WebhookEnabled" json:"WebhookEnabled,omitempty"`
+	WebsocketEnabled  *bool  `yaml:"WebsocketEnabled" json:"WebsocketEnabled,omitempty"`
+	WebhookEnabled    *bool  `yaml:"WebhookEnabled" json:"WebhookEnabled,omitempty"`
 	VerificationToken string `yaml:"VerificationToken" json:"VerificationToken,omitempty"`
-	WebhookPath      string `yaml:"WebhookPath" json:"WebhookPath,omitempty"`
-	WebhookHost      string `yaml:"WebhookHost" json:"WebhookHost,omitempty"`
-	WebhookPort      int    `yaml:"WebhookPort" json:"WebhookPort,omitempty"`
+	WebhookPath       string `yaml:"WebhookPath" json:"WebhookPath,omitempty"`
+	WebhookHost       string `yaml:"WebhookHost" json:"WebhookHost,omitempty"`
+	WebhookPort       int    `yaml:"WebhookPort" json:"WebhookPort,omitempty"`
 }
 
 // FeishuAPIConfig 飞书开放平台 API 配置
@@ -152,10 +152,10 @@ type FeishuAPIConfig struct {
 
 // StatusStoreConfig 状态存储配置
 type StatusStoreConfig struct {
-	Enabled *bool       `yaml:"Enabled" json:"Enabled,omitempty"`
-	Type    string      `yaml:"Type" json:"Type,omitempty"` // memory, mysql, pinecone, hybrid
+	Enabled *bool        `yaml:"Enabled" json:"Enabled,omitempty"`
+	Type    string       `yaml:"Type" json:"Type,omitempty"` // memory, mysql, pinecone, hybrid
 	Vector  VectorConfig `yaml:"Vector" json:"Vector"`
-	MySQL   MySQLConfig `yaml:"MySQL" json:"MySQL"`
+	MySQL   MySQLConfig  `yaml:"MySQL" json:"MySQL"`
 }
 
 // VectorConfig 向量存储特性配置
@@ -176,11 +176,12 @@ type MySQLConfig struct {
 
 // WeChatConfig 微信推送配置
 type WeChatConfig struct {
-	Enabled       *bool    `yaml:"Enabled" json:"Enabled,omitempty"`             // 是否启用微信推送功能
-	AppID         string   `yaml:"AppID" json:"AppID,omitempty"`                 // 微信服务号 AppID
-	AppSecret     string   `yaml:"AppSecret" json:"AppSecret,omitempty"`         // 微信服务号 AppSecret
-	OpenIDs       []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`             // 默认接收消息的用户 openid 列表
-	TokenFilePath string   `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"` // AccessToken 存储文件路径（相对于项目根目录）
+	Enabled        *bool    `yaml:"Enabled" json:"Enabled,omitempty"`               // 是否启用微信推送功能
+	NotifyOnEvents []string `yaml:"NotifyOnEvents" json:"NotifyOnEvents,omitempty"` // 运行时状态通知事件过滤，例如 failed/completed
+	AppID          string   `yaml:"AppID" json:"AppID,omitempty"`                   // 微信服务号 AppID
+	AppSecret      string   `yaml:"AppSecret" json:"AppSecret,omitempty"`           // 微信服务号 AppSecret
+	OpenIDs        []string `yaml:"OpenIDs" json:"OpenIDs,omitempty"`               // 默认接收消息的用户 openid 列表
+	TokenFilePath  string   `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"`   // AccessToken 存储文件路径（相对于项目根目录）
 	// 小程序相关配置（用于发送小程序卡片消息）
 	MiniProgram MiniProgramConfig `yaml:"MiniProgram" json:"MiniProgram,omitempty"`
 }
@@ -194,27 +195,30 @@ type MiniProgramConfig struct {
 
 // WeComConfig 企业微信配置
 type WeComConfig struct {
-	Enabled       *bool                 `yaml:"Enabled" json:"Enabled,omitempty"`
-	CorpID        string                `yaml:"CorpID" json:"CorpID,omitempty"`
-	QYAPIHost     string                `yaml:"QYAPIHost" json:"QYAPIHost,omitempty"`
-	TokenFilePath string                `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"`
-	Callback      WeComCallbackConfig   `yaml:"Callback" json:"Callback,omitempty"`
-	Applications  []WeComApplication    `yaml:"Applications" json:"Applications,omitempty"`
+	Enabled        *bool               `yaml:"Enabled" json:"Enabled,omitempty"`
+	NotifyOnEvents []string            `yaml:"NotifyOnEvents" json:"NotifyOnEvents,omitempty"` // 运行时状态通知事件过滤，例如 failed/completed
+	CorpID         string              `yaml:"CorpID" json:"CorpID,omitempty"`
+	QYAPIHost      string              `yaml:"QYAPIHost" json:"QYAPIHost,omitempty"`
+	TokenFilePath  string              `yaml:"TokenFilePath" json:"TokenFilePath,omitempty"`
+	Callback       WeComCallbackConfig `yaml:"Callback" json:"Callback,omitempty"`
+	Applications   []WeComApplication  `yaml:"Applications" json:"Applications,omitempty"`
 }
 
 // WeComCallbackConfig 企业微信客服回调配置
 type WeComCallbackConfig struct {
-	Enabled       *bool  `yaml:"Enabled" json:"Enabled,omitempty"`             // 是否启用回调接收消息功能
-	URL           string `yaml:"URL" json:"URL,omitempty"`                    // 回调 URL（如：https://your-domain.com/api/v1/wecom/callback）
-	Token         string `yaml:"Token" json:"Token,omitempty"`                 // 回调 Token（企业微信管理后台配置）
+	Enabled        *bool  `yaml:"Enabled" json:"Enabled,omitempty"`               // 是否启用回调接收消息功能
+	URL            string `yaml:"URL" json:"URL,omitempty"`                       // 回调 URL（如：https://your-domain.com/api/v1/wecom/callback）
+	Token          string `yaml:"Token" json:"Token,omitempty"`                   // 回调 Token（企业微信管理后台配置）
 	EncodingAESKey string `yaml:"EncodingAESKey" json:"EncodingAESKey,omitempty"` // 回调消息加密密钥（企业微信管理后台配置）
-	Path          string `yaml:"Path" json:"Path,omitempty"`                   // 回调路径（相对路径，用于路由注册）
+	Path           string `yaml:"Path" json:"Path,omitempty"`                     // 回调路径（相对路径，用于路由注册）
 }
 
 // WeComApplication 企业微信应用配置
 type WeComApplication struct {
-	AgentID            int64  `yaml:"AgentID" json:"AgentID"`
-	AgentSecret        string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
+	AgentID     int64  `yaml:"AgentID" json:"AgentID"`
+	AgentSecret string `yaml:"AgentSecret" json:"AgentSecret,omitempty"`
+	// ToUser 为 DigEino 运行时状态通知专用：企业微信成员 user_id，非业务 Tool 参数。
+	ToUser             string `yaml:"ToUser" json:"ToUser,omitempty"`
 	ManageAllKFSession bool   `yaml:"ManageAllKFSession" json:"ManageAllKFSession,omitempty"` // 是否管理所有客服会话，用于发送客服消息给个人微信用户
 }
 
@@ -226,9 +230,9 @@ type ChatModelConfig struct {
 
 // UIUXConfig UI/UX 工具配置
 type UIUXConfig struct {
-	Storage     UIUXStorageConfig     `yaml:"Storage" json:"Storage"`
-	TempStorage TempStorageConfig     `yaml:"TempStorage" json:"TempStorage"`
-	Preview     UIUXPreviewConfig     `yaml:"Preview" json:"Preview"`
+	Storage     UIUXStorageConfig `yaml:"Storage" json:"Storage"`
+	TempStorage TempStorageConfig `yaml:"TempStorage" json:"TempStorage"`
+	Preview     UIUXPreviewConfig `yaml:"Preview" json:"Preview"`
 }
 
 // UIUXPreviewConfig 预览产物与 Patch 相关限制
@@ -269,18 +273,18 @@ type ToolsConfig struct {
 
 // OCRConfig 图片 OCR 大模型配置。
 type OCRConfig struct {
-	Enabled               *bool              `yaml:"Enabled" json:"Enabled,omitempty"`
-	Provider              string             `yaml:"Provider" json:"Provider"` // deepseek-ocr
-	DeepSeek              DeepSeekOCRConfig  `yaml:"DeepSeek" json:"DeepSeek"`
-	MaxImageBytes         int                `yaml:"MaxImageBytes" json:"MaxImageBytes"`
-	AllowedMimeTypes      []string           `yaml:"AllowedMimeTypes" json:"AllowedMimeTypes"`
-	AllowedFilePaths      []string           `yaml:"AllowedFilePaths" json:"AllowedFilePaths"`
-	AllowedImageDomains   []string           `yaml:"AllowedImageDomains" json:"AllowedImageDomains"`
-	BlockPrivateNetworks  *bool              `yaml:"BlockPrivateNetworks" json:"BlockPrivateNetworks,omitempty"`
-	URLDownloadTimeoutSec int                `yaml:"URLDownloadTimeoutSec" json:"URLDownloadTimeoutSec"`
-	TimeoutSec            int                `yaml:"TimeoutSec" json:"TimeoutSec"`
-	RetryCount            int                `yaml:"RetryCount" json:"RetryCount"`
-	RetryDelayMs          int                `yaml:"RetryDelayMs" json:"RetryDelayMs"`
+	Enabled               *bool             `yaml:"Enabled" json:"Enabled,omitempty"`
+	Provider              string            `yaml:"Provider" json:"Provider"` // deepseek-ocr
+	DeepSeek              DeepSeekOCRConfig `yaml:"DeepSeek" json:"DeepSeek"`
+	MaxImageBytes         int               `yaml:"MaxImageBytes" json:"MaxImageBytes"`
+	AllowedMimeTypes      []string          `yaml:"AllowedMimeTypes" json:"AllowedMimeTypes"`
+	AllowedFilePaths      []string          `yaml:"AllowedFilePaths" json:"AllowedFilePaths"`
+	AllowedImageDomains   []string          `yaml:"AllowedImageDomains" json:"AllowedImageDomains"`
+	BlockPrivateNetworks  *bool             `yaml:"BlockPrivateNetworks" json:"BlockPrivateNetworks,omitempty"`
+	URLDownloadTimeoutSec int               `yaml:"URLDownloadTimeoutSec" json:"URLDownloadTimeoutSec"`
+	TimeoutSec            int               `yaml:"TimeoutSec" json:"TimeoutSec"`
+	RetryCount            int               `yaml:"RetryCount" json:"RetryCount"`
+	RetryDelayMs          int               `yaml:"RetryDelayMs" json:"RetryDelayMs"`
 }
 
 // DeepSeekOCRConfig DeepSeek-OCR 适配器配置。
@@ -288,7 +292,7 @@ type DeepSeekOCRConfig struct {
 	ApiKey      string `yaml:"ApiKey" json:"ApiKey"`
 	BaseUrl     string `yaml:"BaseUrl" json:"BaseUrl"`
 	Model       string `yaml:"Model" json:"Model"`
-	Mode        string `yaml:"Mode" json:"Mode"`           // chat | ocr_endpoint
+	Mode        string `yaml:"Mode" json:"Mode"`               // chat | ocr_endpoint
 	OCREndpoint string `yaml:"OCREndpoint" json:"OCREndpoint"` // 默认 /v1/ocr，用于自托管
 }
 
@@ -313,11 +317,11 @@ type FirecrawlConfig struct {
 // WebSearchConfig 网页搜索配置
 type WebSearchConfig struct {
 	Engine     string           `yaml:"Engine" json:"Engine"` // bocha, serpapi, google, bing, duckduckgo, firecrawl, tavily
-	Bocha      BochaConfig     `yaml:"Bocha" json:"Bocha"`
-	SerpApi    SerpApiConfig   `yaml:"SerpApi" json:"SerpApi"`
-	Google     GoogleConfig    `yaml:"Google" json:"Google"`
-	Bing       BingConfig      `yaml:"Bing" json:"Bing"`
-	Tavily     TavilyConfig    `yaml:"Tavily" json:"Tavily"`
+	Bocha      BochaConfig      `yaml:"Bocha" json:"Bocha"`
+	SerpApi    SerpApiConfig    `yaml:"SerpApi" json:"SerpApi"`
+	Google     GoogleConfig     `yaml:"Google" json:"Google"`
+	Bing       BingConfig       `yaml:"Bing" json:"Bing"`
+	Tavily     TavilyConfig     `yaml:"Tavily" json:"Tavily"`
 	DuckDuckGo DuckDuckGoConfig `yaml:"DuckDuckGo" json:"DuckDuckGo"`
 }
 
@@ -351,9 +355,9 @@ type BingConfig struct {
 // TavilyConfig Tavily 搜索配置
 type TavilyConfig struct {
 	ApiKey      string `yaml:"ApiKey" json:"ApiKey"`
-	BaseUrl     string `yaml:"BaseUrl" json:"BaseUrl"`           // 可选，默认 https://api.tavily.com
-	SearchDepth string `yaml:"SearchDepth" json:"SearchDepth"`   // basic, fast, advanced, ultra-fast
-	Topic       string `yaml:"Topic" json:"Topic"`               // general, news, finance
+	BaseUrl     string `yaml:"BaseUrl" json:"BaseUrl"`         // 可选，默认 https://api.tavily.com
+	SearchDepth string `yaml:"SearchDepth" json:"SearchDepth"` // basic, fast, advanced, ultra-fast
+	Topic       string `yaml:"Topic" json:"Topic"`             // general, news, finance
 }
 
 // DuckDuckGoConfig DuckDuckGo 搜索配置
@@ -511,13 +515,15 @@ func Default() *Config {
 			},
 		},
 		WeChat: WeChatConfig{
-			Enabled:       &wechatDisabled,
-			TokenFilePath: "storage/app/wechat/access_token.json",
+			Enabled:        &wechatDisabled,
+			NotifyOnEvents: []string{"failed", "completed"},
+			TokenFilePath:  "storage/app/wechat/access_token.json",
 		},
 		WeCom: WeComConfig{
-			Enabled:       &wechatDisabled,
-			QYAPIHost:     "https://qyapi.weixin.qq.com",
-			TokenFilePath: "storage/app/wecom/access_token.json",
+			Enabled:        &wechatDisabled,
+			NotifyOnEvents: []string{"failed", "completed"},
+			QYAPIHost:      "https://qyapi.weixin.qq.com",
+			TokenFilePath:  "storage/app/wecom/access_token.json",
 		},
 		ChatModel: ChatModelConfig{
 			Type: "qwen",
@@ -594,14 +600,14 @@ func Default() *Config {
 				CookieStoreDir:         "storage/app/browser_cookies",
 			},
 			OCR: OCRConfig{
-				Enabled:              &disabled,
-				Provider:             "deepseek-ocr",
-				MaxImageBytes:        10 * 1024 * 1024,
-				BlockPrivateNetworks: &enabled,
+				Enabled:               &disabled,
+				Provider:              "deepseek-ocr",
+				MaxImageBytes:         10 * 1024 * 1024,
+				BlockPrivateNetworks:  &enabled,
 				URLDownloadTimeoutSec: 30,
-				TimeoutSec:           120,
-				RetryCount:           1,
-				RetryDelayMs:         500,
+				TimeoutSec:            120,
+				RetryCount:            1,
+				RetryDelayMs:          500,
 				DeepSeek: DeepSeekOCRConfig{
 					BaseUrl: "https://api.deepseek.com",
 					Model:   "deepseek-ocr",

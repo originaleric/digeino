@@ -3,14 +3,15 @@ package webhook
 import (
 	"context"
 	"strings"
+
+	"github.com/originaleric/digeino/tools/wx"
 )
 
-type FeishuNotifier struct {
-	client *FeishuClient
+type WeChatNotifier struct {
 	events map[string]struct{}
 }
 
-func NewFeishuNotifier(client *FeishuClient, events []string) *FeishuNotifier {
+func NewWeChatNotifier(events []string) *WeChatNotifier {
 	m := make(map[string]struct{}, len(events))
 	for _, event := range events {
 		v := strings.TrimSpace(strings.ToLower(event))
@@ -18,14 +19,11 @@ func NewFeishuNotifier(client *FeishuClient, events []string) *FeishuNotifier {
 			m[v] = struct{}{}
 		}
 	}
-	return &FeishuNotifier{
-		client: client,
-		events: m,
-	}
+	return &WeChatNotifier{events: m}
 }
 
-func (n *FeishuNotifier) SendStatus(ctx context.Context, status ExecutionStatus) error {
-	if n == nil || n.client == nil {
+func (n *WeChatNotifier) SendStatus(ctx context.Context, status ExecutionStatus) error {
+	if n == nil {
 		return nil
 	}
 	event := strings.ToLower(string(status.NormalizeEventType()))
@@ -34,6 +32,8 @@ func (n *FeishuNotifier) SendStatus(ctx context.Context, status ExecutionStatus)
 			return nil
 		}
 	}
-	content := formatStatusTextMessage(status)
-	return n.client.SendText(ctx, "", nil, content)
+	_, err := wx.SendWeChatTextMessage(ctx, wx.SendWeChatTextMessageRequest{
+		Content: formatStatusTextMessage(status),
+	})
+	return err
 }

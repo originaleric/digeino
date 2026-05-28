@@ -17,12 +17,12 @@ import (
 
 const (
 	defaultEventSource = "digeino.status_collector"
-	sinkQueueSize       = 256
-	sinkEnqueueTimeout  = 50 * time.Millisecond
-	sinkRetryCount      = 3
-	sinkRetryDelay      = 100 * time.Millisecond
-	defaultSampleRate   = 100
-	defaultMaxPayload   = 262144 // 256KiB
+	sinkQueueSize      = 256
+	sinkEnqueueTimeout = 50 * time.Millisecond
+	sinkRetryCount     = 3
+	sinkRetryDelay     = 100 * time.Millisecond
+	defaultSampleRate  = 100
+	defaultMaxPayload  = 262144 // 256KiB
 )
 
 // StatusLogger 日志接口，调用方可选择性实现
@@ -40,7 +40,7 @@ type StatusCollector struct {
 	startTime   time.Time
 
 	webhookClients []*WebhookClient
-	feishuNotifiers []*FeishuNotifier
+	notifiers      []StatusNotifier
 	statusStore    StatusStoreInterface
 	statusCallback func(status ExecutionStatus)
 
@@ -64,11 +64,11 @@ type StatusCollector struct {
 }
 
 type sinkTask struct {
-	ctx    context.Context
-	status ExecutionStatus
-	store  StatusStoreInterface
-	client *WebhookClient
-	feishu *FeishuNotifier
+	ctx      context.Context
+	status   ExecutionStatus
+	store    StatusStoreInterface
+	client   *WebhookClient
+	notifier StatusNotifier
 }
 
 // DispatchStats 分发统计信息，用于运行期观测。
@@ -79,8 +79,8 @@ type DispatchStats struct {
 	StoreFailure     int64 `json:"store_failure"`
 	WebhookSuccess   int64 `json:"webhook_success"`
 	WebhookFailure   int64 `json:"webhook_failure"`
-	FeishuSuccess    int64 `json:"feishu_success"`
-	FeishuFailure    int64 `json:"feishu_failure"`
+	NotifierSuccess  int64 `json:"notifier_success"`
+	NotifierFailure  int64 `json:"notifier_failure"`
 	RetryCount       int64 `json:"retry_count"`
 	SampledOut       int64 `json:"sampled_out"`
 	PayloadCompacted int64 `json:"payload_compacted"`
@@ -152,9 +152,17 @@ func (sc *StatusCollector) AddWebhookClient(client *WebhookClient) {
 
 // AddFeishuNotifier 添加飞书通知器
 func (sc *StatusCollector) AddFeishuNotifier(notifier *FeishuNotifier) {
+	sc.AddNotifier(notifier)
+}
+
+// AddNotifier 添加通用通知器
+func (sc *StatusCollector) AddNotifier(notifier StatusNotifier) {
+	if notifier == nil {
+		return
+	}
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	sc.feishuNotifiers = append(sc.feishuNotifiers, notifier)
+	sc.notifiers = append(sc.notifiers, notifier)
 	sc.ensureDispatcherLocked()
 }
 
@@ -309,7 +317,7 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 	callback := sc.statusCallback
 	store := sc.statusStore
 	clients := sc.webhookClients
-	feishuNotifiers := sc.feishuNotifiers
+	notifiers := sc.notifiers
 	sc.mu.Unlock()
 
 	// 1. 优先执行回调（SSE 等），虽然它是同步调用，但在应用端可能已实现异步
@@ -357,13 +365,13 @@ func (sc *StatusCollector) sendStatusAsync(ctx context.Context, status Execution
 			})
 		}
 	}
-	if len(feishuNotifiers) > 0 {
+	if len(notifiers) > 0 {
 		safeCtx := detachContext(ctx)
-		for _, notifier := range feishuNotifiers {
+		for _, notifier := range notifiers {
 			sc.enqueueSinkTask(sinkTask{
-				ctx:    safeCtx,
-				status: asyncStatus,
-				feishu: notifier,
+				ctx:      safeCtx,
+				status:   asyncStatus,
+				notifier: notifier,
 			})
 		}
 	}
@@ -446,9 +454,9 @@ func (sc *StatusCollector) executeSinkTask(task sinkTask) {
 			sinkName = "webhook"
 			err = task.client.SendStatus(task.ctx, task.status)
 		}
-		if task.feishu != nil {
-			sinkName = "feishu"
-			err = task.feishu.SendStatus(task.ctx, task.status)
+		if task.notifier != nil {
+			sinkName = "notifier"
+			err = task.notifier.SendStatus(task.ctx, task.status)
 		}
 		if err == nil {
 			sc.updateSinkResultStats(sinkName, true)
@@ -558,11 +566,11 @@ func (sc *StatusCollector) updateSinkResultStats(sink string, success bool) {
 			} else {
 				stats.WebhookFailure++
 			}
-		case "feishu":
+		case "notifier":
 			if success {
-				stats.FeishuSuccess++
+				stats.NotifierSuccess++
 			} else {
-				stats.FeishuFailure++
+				stats.NotifierFailure++
 			}
 		}
 	})

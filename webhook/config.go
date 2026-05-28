@@ -2,10 +2,14 @@ package webhook
 
 import (
 	"fmt"
+	"log"
 	"strings"
+	"sync"
 
 	"github.com/originaleric/digeino/config"
 )
+
+var feishuCredentialsMissingWarn sync.Once
 
 // GetWebhookConfig 从全局配置获取 WebhookConfig
 func GetWebhookConfig(buildDefaultURL func() string) *config.WebhookConfig {
@@ -95,7 +99,40 @@ func GetFeishuAPIConfig() *config.FeishuAPIConfig {
 		apiCfg.ReceiveIDType = "chat_id"
 	}
 	if strings.TrimSpace(apiCfg.AppID) == "" || strings.TrimSpace(apiCfg.AppSecret) == "" {
+		feishuCredentialsMissingWarn.Do(func() {
+			log.Printf("digeino: Feishu enabled but AppID/AppSecret empty, runtime notification sink disabled")
+		})
 		return nil
 	}
 	return &apiCfg
+}
+
+func GetWeChatConfig() *config.WeChatConfig {
+	cfg := config.Get().WeChat
+	if cfg.Enabled != nil && !*cfg.Enabled {
+		return nil
+	}
+	if strings.TrimSpace(cfg.AppID) == "" || strings.TrimSpace(cfg.AppSecret) == "" {
+		return nil
+	}
+	if len(cfg.OpenIDs) == 0 {
+		return nil
+	}
+	return &cfg
+}
+
+func GetWeComConfig() *config.WeComConfig {
+	cfg := config.Get().WeCom
+	if cfg.Enabled != nil && !*cfg.Enabled {
+		return nil
+	}
+	if strings.TrimSpace(cfg.CorpID) == "" {
+		return nil
+	}
+	for _, app := range cfg.Applications {
+		if app.AgentID > 0 && strings.TrimSpace(app.AgentSecret) != "" && strings.TrimSpace(app.ToUser) != "" {
+			return &cfg
+		}
+	}
+	return nil
 }
