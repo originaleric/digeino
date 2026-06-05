@@ -36,6 +36,7 @@ type GatewayConfig struct {
 	AuthToken          string   `yaml:"AuthToken" json:"AuthToken,omitempty"`
 	AllowedTools       []string `yaml:"AllowedTools" json:"AllowedTools,omitempty"`
 	AllowedReadPaths   []string `yaml:"AllowedReadPaths" json:"AllowedReadPaths,omitempty"`
+	AllowedWritePaths  []string `yaml:"AllowedWritePaths" json:"AllowedWritePaths,omitempty"`
 	ArtifactEnabled    *bool    `yaml:"ArtifactEnabled" json:"ArtifactEnabled,omitempty"`
 	ArtifactDir        string   `yaml:"ArtifactDir" json:"ArtifactDir,omitempty"`
 	ArtifactTTLMinutes int      `yaml:"ArtifactTTLMinutes" json:"ArtifactTTLMinutes,omitempty"`
@@ -525,14 +526,7 @@ func Default() *Config {
 			QYAPIHost:      "https://qyapi.weixin.qq.com",
 			TokenFilePath:  "storage/app/wecom/access_token.json",
 		},
-		ChatModel: ChatModelConfig{
-			Type: "qwen",
-			Config: map[string]interface{}{
-				"ApiKey":  "",
-				"Model":   "qwen-max",
-				"BaseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-			},
-		},
+		ChatModel: ChatModelConfig{},
 		UIUX: UIUXConfig{
 			Storage: UIUXStorageConfig{
 				BaseDir: "storage/app/ui_ux",

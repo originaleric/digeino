@@ -47,12 +47,22 @@ func New(reg *registry.Registry, opts Options) *Runtime {
 
 // Manifest builds the current tool manifest.
 func (r *Runtime) Manifest() protocol.ToolManifest {
+	tools := r.reg.List()
+	if len(r.opts.AllowedTools) > 0 {
+		filtered := make([]protocol.ToolDescriptor, 0, len(tools))
+		for _, tool := range tools {
+			if err := policy.ValidateToolAllowed(tool.Name, r.opts.AllowedTools); err == nil {
+				filtered = append(filtered, tool)
+			}
+		}
+		tools = filtered
+	}
 	return protocol.ToolManifest{
 		Type:           protocol.TypeToolManifest,
 		Runtime:        gwversion.RuntimeName,
 		RuntimeVersion: gwversion.RuntimeVersion,
 		InstanceID:     r.opts.InstanceID,
-		Tools:          r.reg.List(),
+		Tools:          tools,
 	}
 }
 
@@ -61,7 +71,9 @@ func (r *Runtime) Execute(ctx context.Context, call *protocol.ToolCall) *protoco
 	start := time.Now()
 	result := &protocol.ToolResult{
 		Type: protocol.TypeToolResult,
-		ID:   call.ID,
+	}
+	if call != nil {
+		result.ID = call.ID
 	}
 
 	defer func() {

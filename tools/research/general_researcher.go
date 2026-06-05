@@ -17,6 +17,144 @@ import (
 	"github.com/originaleric/digeino/config"
 )
 
+type pathAccessMode string
+
+const (
+	pathAccessRead  pathAccessMode = "read"
+	pathAccessWrite pathAccessMode = "write"
+)
+
+func allowedPathsFor(mode pathAccessMode) []string {
+	cfg := config.Get()
+	switch mode {
+	case pathAccessWrite:
+		return cfg.Gateway.AllowedWritePaths
+	default:
+		return cfg.Gateway.AllowedReadPaths
+	}
+}
+
+func validateConfiguredPath(path string, mode pathAccessMode) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", fmt.Errorf("文件路径不能为空")
+	}
+	allowed := allowedPathsFor(mode)
+	if len(allowed) == 0 {
+		return "", fmt.Errorf("%s path access is disabled without configured allowed paths", mode)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("无法解析文件路径: %w", err)
+	}
+	clean, err := resolvedPathForAccess(abs, mode)
+	if err != nil {
+		return "", err
+	}
+	for _, prefix := range allowed {
+		base, ok := resolvedAllowedBase(prefix)
+		if !ok {
+			continue
+		}
+		if clean == base || strings.HasPrefix(clean, base+string(os.PathSeparator)) {
+			return clean, nil
+		}
+	}
+	return "", fmt.Errorf("path %q is not under configured allowed %s paths", path, mode)
+}
+
+func resolvedAllowedBase(prefix string) (string, bool) {
+	prefix = strings.TrimSpace(prefix)
+	if prefix == "" {
+		return "", false
+	}
+	base, err := filepath.Abs(prefix)
+	if err != nil {
+		return "", false
+	}
+	base, err = filepath.EvalSymlinks(base)
+	if err != nil {
+		return "", false
+	}
+	return filepath.Clean(base), true
+}
+
+func resolvedPathForAccess(absPath string, mode pathAccessMode) (string, error) {
+	clean := filepath.Clean(absPath)
+	resolved, err := filepath.EvalSymlinks(clean)
+	if err == nil {
+		return filepath.Clean(resolved), nil
+	}
+	if mode != pathAccessWrite || !os.IsNotExist(err) {
+		return "", fmt.Errorf("无法解析真实文件路径: %w", err)
+	}
+	parent := filepath.Dir(clean)
+	existing, missing, parentErr := nearestExistingAncestor(parent)
+	if parentErr != nil {
+		return "", parentErr
+	}
+	resolvedParent, parentErr := filepath.EvalSymlinks(existing)
+	if parentErr != nil {
+		return "", fmt.Errorf("无法解析真实父目录: %w", parentErr)
+	}
+	parts := append(missing, filepath.Base(clean))
+	resolvedPath := filepath.Clean(resolvedParent)
+	for _, part := range parts {
+		resolvedPath = filepath.Join(resolvedPath, part)
+	}
+	return resolvedPath, nil
+}
+
+func nearestExistingAncestor(path string) (existing string, missing []string, err error) {
+	clean := filepath.Clean(path)
+	for {
+		if _, statErr := os.Stat(clean); statErr == nil {
+			return clean, missing, nil
+		} else if !os.IsNotExist(statErr) {
+			return "", nil, fmt.Errorf("无法检查真实父目录: %w", statErr)
+		}
+		parent := filepath.Dir(clean)
+		if parent == clean {
+			return "", nil, fmt.Errorf("无法解析真实父目录: no existing ancestor for %q", path)
+		}
+		missing = append([]string{filepath.Base(clean)}, missing...)
+		clean = parent
+	}
+}
+
+func readAllowedFile(path string) ([]byte, error) {
+	file, err := openAllowedReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return io.ReadAll(file)
+}
+
+func allowedTarget(path string, mode pathAccessMode) (base string, rel string, err error) {
+	resolved, err := validateConfiguredPath(path, mode)
+	if err != nil {
+		return "", "", err
+	}
+	for _, prefix := range allowedPathsFor(mode) {
+		candidate, ok := resolvedAllowedBase(prefix)
+		if !ok {
+			continue
+		}
+		if resolved == candidate || strings.HasPrefix(resolved, candidate+string(os.PathSeparator)) {
+			rel, err := filepath.Rel(candidate, resolved)
+			if err != nil {
+				return "", "", err
+			}
+			if rel == "." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || rel == ".." {
+				continue
+			}
+			return candidate, rel, nil
+		}
+	}
+	return "", "", fmt.Errorf("path %q is not under configured allowed %s paths", path, mode)
+}
+
 // --- Grep Search Tool ---
 
 type GrepRequest struct {
@@ -31,14 +169,21 @@ type GrepResponse struct {
 
 // GrepSearch 模拟代码搜索逻辑 (考虑到云端环境，这里使用简单的文件系统遍历，未来可接入 ripgrep)
 func GrepSearch(ctx context.Context, req *GrepRequest) (*GrepResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
 	searchPath := req.Path
 	if searchPath == "" {
 		// 默认搜索当前目录
 		searchPath = "."
 	}
+	searchPath, err := validateConfiguredPath(searchPath, pathAccessRead)
+	if err != nil {
+		return nil, err
+	}
 
 	var matches []string
-	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // 忽略错误文件夹
 		}
@@ -52,7 +197,11 @@ func GrepSearch(ctx context.Context, req *GrepRequest) (*GrepResponse, error) {
 			return nil
 		}
 
-		content, err := os.ReadFile(path)
+		checkedPath, err := validateConfiguredPath(path, pathAccessRead)
+		if err != nil {
+			return nil
+		}
+		content, err := readAllowedFile(checkedPath)
 		if err != nil {
 			return nil
 		}
@@ -85,7 +234,14 @@ type ReadFileResponse struct {
 }
 
 func ReadFile(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
-	content, err := os.ReadFile(req.Path)
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	path, err := validateConfiguredPath(req.Path, pathAccessRead)
+	if err != nil {
+		return nil, err
+	}
+	content, err := readAllowedFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("读取文件失败: %w", err)
 	}
@@ -103,6 +259,13 @@ type DocToMarkdownResponse struct {
 }
 
 func DocToMarkdown(ctx context.Context, req *DocToMarkdownRequest) (*DocToMarkdownResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	path, err := validateConfiguredPath(req.Path, pathAccessRead)
+	if err != nil {
+		return nil, err
+	}
 	cfg := config.Get()
 	toolCfg := cfg.Tools.Unstructured
 
@@ -121,7 +284,7 @@ func DocToMarkdown(ctx context.Context, req *DocToMarkdownRequest) (*DocToMarkdo
 	}
 
 	// 1. 打开文件
-	file, err := os.Open(req.Path)
+	file, err := openAllowedReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("无法打开文档: %w", err)
 	}
@@ -130,7 +293,7 @@ func DocToMarkdown(ctx context.Context, req *DocToMarkdownRequest) (*DocToMarkdo
 	// 2. 准备 multipart 请求
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("files", filepath.Base(req.Path))
+	part, err := writer.CreateFormFile("files", filepath.Base(path))
 	if err != nil {
 		return nil, err
 	}
@@ -178,13 +341,31 @@ func DocToMarkdown(ctx context.Context, req *DocToMarkdownRequest) (*DocToMarkdo
 // --- Factory Functions ---
 
 func NewGrepSearchTool(ctx context.Context) (tool.BaseTool, error) {
+	if !secureFileAccessSupported() {
+		return nil, fmt.Errorf("research_grep tool is disabled because secure file access is not supported on this platform")
+	}
+	if len(allowedPathsFor(pathAccessRead)) == 0 {
+		return nil, fmt.Errorf("research_grep tool is disabled without Gateway.AllowedReadPaths")
+	}
 	return utils.InferTool("research_grep", "在源码或选定目录中全文检索关键词", GrepSearch)
 }
 
 func NewReadFileTool(ctx context.Context) (tool.BaseTool, error) {
+	if !secureFileAccessSupported() {
+		return nil, fmt.Errorf("research_read tool is disabled because secure file access is not supported on this platform")
+	}
+	if len(allowedPathsFor(pathAccessRead)) == 0 {
+		return nil, fmt.Errorf("research_read tool is disabled without Gateway.AllowedReadPaths")
+	}
 	return utils.InferTool("research_read", "精确阅读指定文件的内容", ReadFile)
 }
 
 func NewDocToMarkdownTool(ctx context.Context) (tool.BaseTool, error) {
+	if !secureFileAccessSupported() {
+		return nil, fmt.Errorf("research_doc_to_md tool is disabled because secure file access is not supported on this platform")
+	}
+	if len(allowedPathsFor(pathAccessRead)) == 0 {
+		return nil, fmt.Errorf("research_doc_to_md tool is disabled without Gateway.AllowedReadPaths")
+	}
 	return utils.InferTool("research_doc_to_md", "将 PDF 或 Word 文档解析为 Markdown 文本", DocToMarkdown)
 }

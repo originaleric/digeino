@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
+	openaiModel "github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/originaleric/digeino/config"
-	openaiModel "github.com/cloudwego/eino-ext/components/model/openai"
 )
 
 // NewChatModelFromConfig 从配置创建 ChatModel（参考 DigFlow 的配置方式）
@@ -16,11 +16,18 @@ import (
 func NewChatModelFromConfig(ctx context.Context) (model.ChatModel, error) {
 	cfg := config.Get()
 	chatModelCfg := cfg.ChatModel
+	modelType := strings.ToLower(strings.TrimSpace(chatModelCfg.Type))
+	if modelType == "" {
+		return nil, fmt.Errorf("ChatModel.Type is required but not configured")
+	}
 
 	// 处理环境变量（参考 DigFlow 的 processEnvVars）
-	processedConfig := processEnvVars(chatModelCfg.Config)
+	processedConfig, err := processEnvVars(chatModelCfg.Config)
+	if err != nil {
+		return nil, err
+	}
 
-	switch strings.ToLower(chatModelCfg.Type) {
+	switch modelType {
 	case "qwen":
 		return newQwenModel(ctx, processedConfig)
 	case "openai":
@@ -32,7 +39,7 @@ func NewChatModelFromConfig(ctx context.Context) (model.ChatModel, error) {
 
 // processEnvVars 处理环境变量（参考 DigFlow 的实现）
 // 支持 ${VAR_NAME} 格式的环境变量替换
-func processEnvVars(config map[string]interface{}) map[string]interface{} {
+func processEnvVars(config map[string]interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	for k, v := range config {
@@ -43,7 +50,7 @@ func processEnvVars(config map[string]interface{}) map[string]interface{} {
 				if envVal := os.Getenv(envKey); envVal != "" {
 					result[k] = envVal
 				} else {
-					result[k] = str
+					return nil, fmt.Errorf("ChatModel.Config.%s references missing environment variable %s", k, envKey)
 				}
 			} else {
 				result[k] = v
@@ -53,17 +60,26 @@ func processEnvVars(config map[string]interface{}) map[string]interface{} {
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // getString 获取字符串配置值
 func getString(config map[string]interface{}, key string, defaultValue string) string {
 	if val, ok := config[key]; ok {
 		if str, ok := val.(string); ok {
-			return str
+			return strings.TrimSpace(str)
 		}
 	}
 	return defaultValue
+}
+
+// requireString 获取必填字符串配置值，避免隐式使用任何模型或服务地址兜底。
+func requireString(config map[string]interface{}, key string) (string, error) {
+	val := getString(config, key, "")
+	if val == "" {
+		return "", fmt.Errorf("ChatModel.Config.%s is required but not configured", key)
+	}
+	return val, nil
 }
 
 // getFloat32Ptr 获取 float32 指针配置值
@@ -82,13 +98,18 @@ func getFloat32Ptr(config map[string]interface{}, key string, defaultValue float
 
 // newQwenModel 创建 Qwen 模型
 func newQwenModel(ctx context.Context, cfg map[string]interface{}) (model.ChatModel, error) {
-	apiKey := getString(cfg, "ApiKey", "")
-	if apiKey == "" {
-		return nil, fmt.Errorf("Qwen ApiKey is required but not configured")
+	apiKey, err := requireString(cfg, "ApiKey")
+	if err != nil {
+		return nil, err
 	}
-
-	baseURL := getString(cfg, "BaseUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-	modelName := getString(cfg, "Model", "qwen-max")
+	baseURL, err := requireString(cfg, "BaseUrl")
+	if err != nil {
+		return nil, err
+	}
+	modelName, err := requireString(cfg, "Model")
+	if err != nil {
+		return nil, err
+	}
 
 	chatModelConfig := &openaiModel.ChatModelConfig{
 		BaseURL: baseURL,
@@ -114,13 +135,18 @@ func newQwenModel(ctx context.Context, cfg map[string]interface{}) (model.ChatMo
 
 // newOpenAIModel 创建 OpenAI 模型
 func newOpenAIModel(ctx context.Context, cfg map[string]interface{}) (model.ChatModel, error) {
-	apiKey := getString(cfg, "ApiKey", "")
-	if apiKey == "" {
-		return nil, fmt.Errorf("OpenAI ApiKey is required but not configured")
+	apiKey, err := requireString(cfg, "ApiKey")
+	if err != nil {
+		return nil, err
 	}
-
-	baseURL := getString(cfg, "BaseUrl", "https://api.openai.com/v1")
-	modelName := getString(cfg, "Model", "gpt-4")
+	baseURL, err := requireString(cfg, "BaseUrl")
+	if err != nil {
+		return nil, err
+	}
+	modelName, err := requireString(cfg, "Model")
+	if err != nil {
+		return nil, err
+	}
 
 	chatModelConfig := &openaiModel.ChatModelConfig{
 		BaseURL: baseURL,

@@ -18,6 +18,7 @@ Gateway:
     - x.post.read
     # - file.read   # 需配置 AllowedReadPaths
   AllowedReadPaths: []
+  AllowedWritePaths: []
   ArtifactEnabled: true
   ArtifactDir: "storage/app/gateway_artifacts"
   ArtifactTTLMinutes: 60
@@ -131,13 +132,13 @@ WeCom:
       ManageAllKFSession: false     # 是否管理所有客服会话（用于 send_wecom_customer_message 发给个人微信）
 
 ChatModel:
-  Type: "qwen"                      # 模型类型: qwen, openai
-  Config:
-    ApiKey: ""                       # API Key（支持环境变量 ${API_KEY}）
-    Model: "qwen-max"                # 模型名称
-    BaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1"  # API 地址
-    # Temperature: 0.7               # 可选：温度参数
-    # MaxTokens: 2048                 # 可选：最大 token 数
+  # Type: "qwen"                    # 必填：模型类型，如 qwen, openai
+  # Config:
+  #   ApiKey: "${LLM_API_KEY}"       # 必填：API Key（支持环境变量 ${API_KEY}）
+  #   Model: "your-model-name"       # 必填：模型名称
+  #   BaseUrl: "https://example/v1"  # 必填：API 地址
+  #   Temperature: 0.7               # 可选：温度参数
+  #   MaxTokens: 2048                # 可选：最大 token 数
 
 UIUX:
   Storage:
