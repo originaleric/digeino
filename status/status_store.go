@@ -216,7 +216,7 @@ func (s *mysqlStatusStore) GetExecution(executionID string) (*ExecutionRecord, b
 }
 
 func mysqlExecutionFound(tx *gorm.DB, model MySQLExecutionModel) bool {
-	return tx != nil && tx.Error == nil && tx.RowsAffected > 0 && model.ID > 0 && model.ExecutionID != ""
+	return tx != nil && tx.Error == nil && tx.RowsAffected > 0 && model.ExecutionID != ""
 }
 
 func (s *mysqlStatusStore) AddStatus(executionID string, status webhook.ExecutionStatus) bool {

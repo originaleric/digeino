@@ -63,7 +63,6 @@ func TestMemoryStatusStoreTerminalByEventTypeFailed(t *testing.T) {
 
 func TestMySQLExecutionFoundRequiresRowsAndKeyFields(t *testing.T) {
 	model := MySQLExecutionModel{
-		ID:          1,
 		ExecutionID: "exec-found",
 	}
 
@@ -75,9 +74,6 @@ func TestMySQLExecutionFoundRequiresRowsAndKeyFields(t *testing.T) {
 	}
 	if mysqlExecutionFound(&gorm.DB{RowsAffected: 1}, MySQLExecutionModel{ID: 1}) {
 		t.Fatalf("mysqlExecutionFound should reject an empty execution ID")
-	}
-	if mysqlExecutionFound(&gorm.DB{RowsAffected: 1}, MySQLExecutionModel{ExecutionID: "exec-found"}) {
-		t.Fatalf("mysqlExecutionFound should reject an empty primary key")
 	}
 	if mysqlExecutionFound(&gorm.DB{RowsAffected: 1, Error: gorm.ErrRecordNotFound}, model) {
 		t.Fatalf("mysqlExecutionFound should reject query errors")
