@@ -200,7 +200,8 @@ func (s *mysqlStatusStore) CreateExecution(executionID, appName, requestID strin
 
 func (s *mysqlStatusStore) GetExecution(executionID string) (*ExecutionRecord, bool) {
 	var model MySQLExecutionModel
-	if err := s.db.Table(s.execTable).Where("execution_id = ?", executionID).First(&model).Error; err != nil {
+	tx := s.db.Table(s.execTable).Where("execution_id = ?", executionID).First(&model)
+	if !mysqlExecutionFound(tx, model) {
 		return nil, false
 	}
 	return &ExecutionRecord{
@@ -212,6 +213,10 @@ func (s *mysqlStatusStore) GetExecution(executionID string) (*ExecutionRecord, b
 		Status:      model.Status,
 		Error:       model.Error,
 	}, true
+}
+
+func mysqlExecutionFound(tx *gorm.DB, model MySQLExecutionModel) bool {
+	return tx != nil && tx.Error == nil && tx.RowsAffected > 0 && model.ID > 0 && model.ExecutionID != ""
 }
 
 func (s *mysqlStatusStore) AddStatus(executionID string, status webhook.ExecutionStatus) bool {

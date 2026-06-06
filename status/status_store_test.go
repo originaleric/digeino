@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/originaleric/digeino/webhook"
+	"gorm.io/gorm"
 )
 
 func TestMemoryStatusStoreTerminalByEventTypeCompleted(t *testing.T) {
@@ -57,5 +58,28 @@ func TestMemoryStatusStoreTerminalByEventTypeFailed(t *testing.T) {
 	}
 	if record.EndTime == nil {
 		t.Fatalf("record.EndTime should be set for terminal event")
+	}
+}
+
+func TestMySQLExecutionFoundRequiresRowsAndKeyFields(t *testing.T) {
+	model := MySQLExecutionModel{
+		ID:          1,
+		ExecutionID: "exec-found",
+	}
+
+	if !mysqlExecutionFound(&gorm.DB{RowsAffected: 1}, model) {
+		t.Fatalf("mysqlExecutionFound should accept a populated model with RowsAffected")
+	}
+	if mysqlExecutionFound(&gorm.DB{RowsAffected: 0}, model) {
+		t.Fatalf("mysqlExecutionFound should reject zero RowsAffected")
+	}
+	if mysqlExecutionFound(&gorm.DB{RowsAffected: 1}, MySQLExecutionModel{ID: 1}) {
+		t.Fatalf("mysqlExecutionFound should reject an empty execution ID")
+	}
+	if mysqlExecutionFound(&gorm.DB{RowsAffected: 1}, MySQLExecutionModel{ExecutionID: "exec-found"}) {
+		t.Fatalf("mysqlExecutionFound should reject an empty primary key")
+	}
+	if mysqlExecutionFound(&gorm.DB{RowsAffected: 1, Error: gorm.ErrRecordNotFound}, model) {
+		t.Fatalf("mysqlExecutionFound should reject query errors")
 	}
 }
