@@ -2,14 +2,16 @@ package ocr
 
 // OCRRequest 统一 OCR 输入（与方案 Schema 对齐）。
 type OCRRequest struct {
-	ImageURL     string   `json:"image_url,omitempty" jsonschema_description:"图片 URL，适合云端可访问图片"`
-	ImageBase64  string   `json:"image_base64,omitempty" jsonschema_description:"图片 Base64（可带 data:image/...;base64, 前缀）"`
-	FilePath     string   `json:"file_path,omitempty" jsonschema_description:"本地文件路径，需在配置的 AllowedFilePaths 前缀内"`
-	MimeType     string   `json:"mime_type,omitempty" jsonschema_description:"图片 MIME 类型，如 image/png"`
-	Task         string   `json:"task,omitempty" jsonschema_description:"任务类型：plain_text、layout、table、form、invoice"`
-	Languages    []string `json:"languages,omitempty" jsonschema_description:"语言提示，如 zh、en"`
-	ReturnBBox   bool     `json:"return_bbox,omitempty" jsonschema_description:"是否返回文字坐标"`
-	ReturnLayout bool     `json:"return_layout,omitempty" jsonschema_description:"是否返回版面结构"`
+	ImageURL     string         `json:"image_url,omitempty" jsonschema_description:"图片 URL，适合云端可访问图片"`
+	ImageBase64  string         `json:"image_base64,omitempty" jsonschema_description:"图片 Base64（可带 data:image/...;base64, 前缀）"`
+	FilePath     string         `json:"file_path,omitempty" jsonschema_description:"本地文件路径，需在配置的 AllowedFilePaths 前缀内"`
+	MimeType     string         `json:"mime_type,omitempty" jsonschema_description:"图片 MIME 类型，如 image/png"`
+	Task         string         `json:"task,omitempty" jsonschema_description:"任务类型：plain_text、layout、table、receipt、form"`
+	Language     string         `json:"language,omitempty" jsonschema_description:"语言提示，如 zh、en"`
+	Languages    []string       `json:"languages,omitempty" jsonschema_description:"语言提示，如 zh、en"`
+	Options      map[string]any `json:"options,omitempty" jsonschema_description:"Provider 特有选项"`
+	ReturnBBox   bool           `json:"return_bbox,omitempty" jsonschema_description:"是否返回文字坐标"`
+	ReturnLayout bool           `json:"return_layout,omitempty" jsonschema_description:"是否返回版面结构"`
 }
 
 // OCRBlock 版面块。
@@ -33,17 +35,18 @@ type OCRUsage struct {
 
 // OCRResponse 统一 OCR 输出。
 type OCRResponse struct {
-	Text       string     `json:"text"`
-	Blocks     []OCRBlock `json:"blocks,omitempty"`
-	Tables     []OCRTable `json:"tables,omitempty"`
-	Confidence float64    `json:"confidence,omitempty"`
-	Provider   string     `json:"provider"`
-	Model      string     `json:"model"`
-	Usage      *OCRUsage  `json:"usage,omitempty"`
+	Text       string         `json:"text"`
+	Blocks     []OCRBlock     `json:"blocks,omitempty"`
+	Tables     []OCRTable     `json:"tables,omitempty"`
+	Confidence float64        `json:"confidence,omitempty"`
+	Provider   string         `json:"provider"`
+	Model      string         `json:"model"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
+	Usage      *OCRUsage      `json:"usage,omitempty"`
 }
 
-// resolvedImage 内部：解析后的图片载荷。
-type resolvedImage struct {
+// OCRImage 是经 DigEino 安全策略校验和规范化后的图片载荷。
+type OCRImage struct {
 	DataURL  string // data:image/png;base64,... 或 https://...
 	MimeType string
 	Source   string // url | base64 | file

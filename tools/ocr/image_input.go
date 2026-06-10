@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func resolveImage(ctx context.Context, req *OCRRequest) (*resolvedImage, error) {
+func resolveImage(ctx context.Context, req *OCRRequest) (*OCRImage, error) {
 	if err := validateRequest(req); err != nil {
 		return nil, err
 	}
@@ -28,6 +28,9 @@ func resolveImage(ctx context.Context, req *OCRRequest) (*resolvedImage, error) 
 		}
 		raw, err := decodeDataURL(dataURL)
 		if err != nil {
+			if _, ok := asOCRError(err); ok {
+				return nil, err
+			}
 			return nil, newOCRError(CodeInvalidInput, err.Error())
 		}
 		mime, err = validateImageBytes(raw, mime)
@@ -35,7 +38,7 @@ func resolveImage(ctx context.Context, req *OCRRequest) (*resolvedImage, error) 
 			return nil, err
 		}
 		dataURL = fmt.Sprintf("data:%s;base64,%s", mime, base64.StdEncoding.EncodeToString(raw))
-		return &resolvedImage{DataURL: dataURL, MimeType: mime, Source: "base64"}, nil
+		return &OCRImage{DataURL: dataURL, MimeType: mime, Source: "base64"}, nil
 
 	case strings.TrimSpace(req.FilePath) != "":
 		if err := validateFilePath(req.FilePath); err != nil {
@@ -55,7 +58,7 @@ func resolveImage(ctx context.Context, req *OCRRequest) (*resolvedImage, error) 
 		}
 		b64 := base64.StdEncoding.EncodeToString(data)
 		dataURL := fmt.Sprintf("data:%s;base64,%s", mime, b64)
-		return &resolvedImage{DataURL: dataURL, MimeType: mime, Source: "file"}, nil
+		return &OCRImage{DataURL: dataURL, MimeType: mime, Source: "file"}, nil
 	}
 	return nil, newOCRError(CodeInvalidInput, errNoImageSource.Error())
 }
@@ -90,7 +93,11 @@ func decodeDataURL(dataURL string) ([]byte, error) {
 	if idx < 0 {
 		return nil, fmt.Errorf("invalid data URL")
 	}
-	return base64.StdEncoding.DecodeString(dataURL[idx+1:])
+	encoded := strings.TrimSpace(dataURL[idx+1:])
+	if len(encoded) > maxEncodedImageBase64Length() {
+		return nil, newOCRError(CodeImageTooLarge, fmt.Sprintf("image_base64 exceeds encoded limit %d", maxEncodedImageBase64Length()))
+	}
+	return base64.StdEncoding.DecodeString(encoded)
 }
 
 func mimeFromPath(path string) string {
@@ -114,7 +121,7 @@ func mimeFromPath(path string) string {
 }
 
 // fetchImageFromURL 下载 URL 图片，经 SSRF 防护与大小/MIME 校验后转为 data URL。
-func fetchImageFromURL(ctx context.Context, imageURL string, downloadTimeout time.Duration) (*resolvedImage, error) {
+func fetchImageFromURL(ctx context.Context, imageURL string, downloadTimeout time.Duration) (*OCRImage, error) {
 	if err := validateImageURL(imageURL); err != nil {
 		return nil, err
 	}
@@ -131,17 +138,17 @@ func fetchImageFromURL(ctx context.Context, imageURL string, downloadTimeout tim
 		if oe, ok := asOCRError(err); ok {
 			return nil, oe
 		}
-		return nil, newOCRError(CodeProviderError, "download image: "+err.Error())
+		return nil, newOCRError(CodeDownloadError, "download image: "+err.Error())
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, newOCRError(CodeProviderError, fmt.Sprintf("download image: HTTP %d", resp.StatusCode))
+		return nil, newOCRError(CodeDownloadError, fmt.Sprintf("download image: HTTP %d", resp.StatusCode))
 	}
 
 	maxBytes := maxImageBytesLimit()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxBytes)+1))
 	if err != nil {
-		return nil, newOCRError(CodeProviderError, err.Error())
+		return nil, newOCRError(CodeDownloadError, err.Error())
 	}
 	if len(data) > maxBytes {
 		return nil, newOCRError(CodeImageTooLarge, fmt.Sprintf("image size exceeds limit %d", maxBytes))
@@ -154,5 +161,5 @@ func fetchImageFromURL(ctx context.Context, imageURL string, downloadTimeout tim
 	}
 	b64 := base64.StdEncoding.EncodeToString(data)
 	dataURL := fmt.Sprintf("data:%s;base64,%s", mime, b64)
-	return &resolvedImage{DataURL: dataURL, MimeType: mime, Source: "url"}, nil
+	return &OCRImage{DataURL: dataURL, MimeType: mime, Source: "url"}, nil
 }

@@ -43,7 +43,7 @@ func (p *deepSeekProvider) Name() string {
 	return "deepseek-ocr"
 }
 
-func (p *deepSeekProvider) Recognize(ctx context.Context, req *OCRRequest, img *resolvedImage) (*OCRResponse, error) {
+func (p *deepSeekProvider) Recognize(ctx context.Context, req *OCRRequest, img *OCRImage) (*OCRResponse, error) {
 	mode := strings.ToLower(strings.TrimSpace(p.cfg.Mode))
 	if mode == "" {
 		mode = "chat"
@@ -82,7 +82,7 @@ func (p *deepSeekProvider) baseURL() string {
 	return defaultDeepSeekBaseURL
 }
 
-func (p *deepSeekProvider) recognizeChat(ctx context.Context, req *OCRRequest, img *resolvedImage) (*OCRResponse, error) {
+func (p *deepSeekProvider) recognizeChat(ctx context.Context, req *OCRRequest, img *OCRImage) (*OCRResponse, error) {
 	body := chatCompletionRequest{
 		Model: p.model(),
 		Messages: []chatMessage{
@@ -100,7 +100,7 @@ func (p *deepSeekProvider) recognizeChat(ctx context.Context, req *OCRRequest, i
 	if err != nil {
 		return nil, err
 	}
-	text, blocks, tables, conf := parseModelOutput(raw, req)
+	text, blocks, tables, conf, parsedMetadata := parseModelOutput(raw, req)
 	return &OCRResponse{
 		Text:       text,
 		Blocks:     blocks,
@@ -108,21 +108,27 @@ func (p *deepSeekProvider) recognizeChat(ctx context.Context, req *OCRRequest, i
 		Confidence: conf,
 		Provider:   p.Name(),
 		Model:      p.model(),
+		Metadata:   mergeMetadata(parsedMetadata, p.metadata(req, img, "chat", "/v1/chat/completions")),
 		Usage:      usage,
 	}, nil
 }
 
-func (p *deepSeekProvider) recognizeOCREndpoint(ctx context.Context, req *OCRRequest, img *resolvedImage) (*OCRResponse, error) {
+func (p *deepSeekProvider) recognizeOCREndpoint(ctx context.Context, req *OCRRequest, img *OCRImage) (*OCRResponse, error) {
 	payload := map[string]any{
 		"image":      img.DataURL,
 		"image_type": "base64",
 		"prompt":     buildPrompt(req),
 	}
-	if len(req.Languages) > 0 {
-		payload["language"] = strings.Join(req.Languages, ",")
+	if languages := requestLanguages(req); len(languages) > 0 {
+		payload["language"] = strings.Join(languages, ",")
 	}
 	if req.Task != "" {
 		payload["task"] = req.Task
+	}
+	for k, v := range req.Options {
+		if _, exists := payload[k]; !exists {
+			payload[k] = v
+		}
 	}
 	endpoint := strings.TrimSpace(p.cfg.OCREndpoint)
 	if endpoint == "" {
@@ -135,7 +141,7 @@ func (p *deepSeekProvider) recognizeOCREndpoint(ctx context.Context, req *OCRReq
 	if err != nil {
 		return nil, err
 	}
-	text, blocks, tables, conf := parseModelOutput(raw, req)
+	text, blocks, tables, conf, parsedMetadata := parseModelOutput(raw, req)
 	return &OCRResponse{
 		Text:       text,
 		Blocks:     blocks,
@@ -143,6 +149,7 @@ func (p *deepSeekProvider) recognizeOCREndpoint(ctx context.Context, req *OCRReq
 		Confidence: conf,
 		Provider:   p.Name(),
 		Model:      p.model(),
+		Metadata:   mergeMetadata(parsedMetadata, p.metadata(req, img, "ocr_endpoint", endpoint)),
 	}, nil
 }
 
@@ -188,11 +195,11 @@ func isRetryable(err error) bool {
 func (p *deepSeekProvider) postJSON(ctx context.Context, url string, body any) (string, *OCRUsage, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
-		return "", nil, err
+		return "", nil, newOCRError(CodeInvalidInput, "invalid OCR provider payload: "+err.Error())
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(data))
 	if err != nil {
-		return "", nil, err
+		return "", nil, newOCRError(CodeConfigMissing, "invalid OCR provider URL: "+err.Error())
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+deepSeekAPIKey(p.cfg))
@@ -255,10 +262,10 @@ func buildPrompt(req *OCRRequest) string {
 		task = "plain_text"
 	}
 	langHint := ""
-	if len(req.Languages) > 0 {
-		langHint = " Focus on languages: " + strings.Join(req.Languages, ", ") + "."
+	if languages := requestLanguages(req); len(languages) > 0 {
+		langHint = " Focus on languages: " + strings.Join(languages, ", ") + "."
 	}
-	structured := req.ReturnLayout || req.ReturnBBox || task == "layout" || task == "table" || task == "form" || task == "invoice"
+	structured := req.ReturnLayout || req.ReturnBBox || task == "layout" || task == "table" || task == "form" || task == "receipt" || task == "invoice"
 
 	switch task {
 	case "table":
@@ -273,7 +280,7 @@ func buildPrompt(req *OCRRequest) string {
 			return base + langHint + ` Return JSON only: {"text":"...","blocks":[{"type":"field","text":"label: value","bbox":[x1,y1,x2,y2],"confidence":0.0}],"tables":[],"confidence":0.0}`
 		}
 		return base + langHint
-	case "invoice":
+	case "receipt", "invoice":
 		base := "Extract invoice/receipt fields (merchant, date, items, amounts, tax)."
 		if structured {
 			return base + langHint + ` Return JSON only: {"text":"...","blocks":[],"tables":[],"confidence":0.0}`
@@ -293,10 +300,53 @@ func buildPrompt(req *OCRRequest) string {
 	}
 }
 
-func parseModelOutput(raw string, req *OCRRequest) (text string, blocks []OCRBlock, tables []OCRTable, confidence float64) {
+func requestLanguages(req *OCRRequest) []string {
+	if req == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var langs []string
+	add := func(lang string) {
+		lang = strings.TrimSpace(lang)
+		if lang == "" || seen[lang] {
+			return
+		}
+		seen[lang] = true
+		langs = append(langs, lang)
+	}
+	add(req.Language)
+	for _, lang := range req.Languages {
+		add(lang)
+	}
+	return langs
+}
+
+func (p *deepSeekProvider) metadata(req *OCRRequest, img *OCRImage, mode, endpoint string) map[string]any {
+	metadata := map[string]any{
+		"mode":     mode,
+		"endpoint": endpoint,
+	}
+	if img != nil {
+		metadata["source"] = img.Source
+		metadata["mime_type"] = img.MimeType
+	}
+	if req != nil {
+		task := req.Task
+		if task == "" {
+			task = "plain_text"
+		}
+		metadata["task"] = task
+		if languages := requestLanguages(req); len(languages) > 0 {
+			metadata["languages"] = languages
+		}
+	}
+	return metadata
+}
+
+func parseModelOutput(raw string, req *OCRRequest) (text string, blocks []OCRBlock, tables []OCRTable, confidence float64, metadata map[string]any) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return "", nil, nil, 0
+		return "", nil, nil, 0, nil
 	}
 	// 剥离 markdown 代码块
 	if strings.HasPrefix(raw, "```") {
@@ -304,9 +354,22 @@ func parseModelOutput(raw string, req *OCRRequest) (text string, blocks []OCRBlo
 	}
 	var parsed OCRResponse
 	if err := json.Unmarshal([]byte(raw), &parsed); err == nil && (parsed.Text != "" || len(parsed.Blocks) > 0 || len(parsed.Tables) > 0) {
-		return parsed.Text, parsed.Blocks, parsed.Tables, parsed.Confidence
+		return parsed.Text, parsed.Blocks, parsed.Tables, parsed.Confidence, parsed.Metadata
 	}
-	return raw, nil, nil, 0
+	return raw, nil, nil, 0, nil
+}
+
+func mergeMetadata(maps ...map[string]any) map[string]any {
+	merged := map[string]any{}
+	for _, m := range maps {
+		for k, v := range m {
+			merged[k] = v
+		}
+	}
+	if len(merged) == 0 {
+		return nil
+	}
+	return merged
 }
 
 func stripCodeFence(s string) string {

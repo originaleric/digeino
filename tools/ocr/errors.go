@@ -10,6 +10,7 @@ const (
 	CodeMimeNotAllowed  = "OCR_MIME_NOT_ALLOWED"
 	CodePathNotAllowed  = "OCR_PATH_NOT_ALLOWED"
 	CodeURLNotAllowed   = "OCR_URL_NOT_ALLOWED"
+	CodeDownloadError   = "OCR_DOWNLOAD_ERROR"
 	CodeProviderError   = "OCR_PROVIDER_ERROR"
 	CodeProviderTimeout = "OCR_PROVIDER_TIMEOUT"
 )

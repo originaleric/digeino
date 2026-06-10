@@ -41,6 +41,17 @@ func TestValidateRequest_singleSource(t *testing.T) {
 	}
 }
 
+func TestValidateRequest_taskTypes(t *testing.T) {
+	for _, task := range []string{"plain_text", "layout", "table", "receipt", "form", "invoice"} {
+		if err := validateRequest(&OCRRequest{ImageURL: "https://example.com/a.png", Task: task}); err != nil {
+			t.Fatalf("task %q should pass: %v", task, err)
+		}
+	}
+	if err := validateRequest(&OCRRequest{ImageURL: "https://example.com/a.png", Task: "video"}); err == nil {
+		t.Fatal("expected unsupported task error")
+	}
+}
+
 func TestNormalizeMIME_jpgAlias(t *testing.T) {
 	if got := normalizeMIME("image/jpg"); got != "image/jpeg" {
 		t.Fatalf("got %q", got)
@@ -96,9 +107,16 @@ func TestResolveValidatedHostIPs_literalIP(t *testing.T) {
 }
 
 func TestParseModelOutput_json(t *testing.T) {
-	raw := `{"text":"hello","blocks":[{"type":"paragraph","text":"hello","confidence":0.9}],"confidence":0.9}`
-	text, blocks, _, conf := parseModelOutput(raw, &OCRRequest{ReturnLayout: true})
-	if text != "hello" || len(blocks) != 1 || conf != 0.9 {
-		t.Fatalf("unexpected parse: text=%q blocks=%d conf=%v", text, len(blocks), conf)
+	raw := `{"text":"hello","blocks":[{"type":"paragraph","text":"hello","confidence":0.9}],"confidence":0.9,"metadata":{"provider_trace_id":"abc"}}`
+	text, blocks, _, conf, metadata := parseModelOutput(raw, &OCRRequest{ReturnLayout: true})
+	if text != "hello" || len(blocks) != 1 || conf != 0.9 || metadata["provider_trace_id"] != "abc" {
+		t.Fatalf("unexpected parse: text=%q blocks=%d conf=%v metadata=%v", text, len(blocks), conf, metadata)
+	}
+}
+
+func TestRequestLanguages_dedupesLanguageAndLanguages(t *testing.T) {
+	got := requestLanguages(&OCRRequest{Language: "zh", Languages: []string{"zh", "en"}})
+	if len(got) != 2 || got[0] != "zh" || got[1] != "en" {
+		t.Fatalf("unexpected languages: %#v", got)
 	}
 }

@@ -38,7 +38,7 @@ func validateRequest(req *OCRRequest) error {
 	}
 	if req.Task != "" {
 		switch req.Task {
-		case "plain_text", "layout", "table", "form", "invoice":
+		case "plain_text", "layout", "table", "receipt", "form", "invoice":
 		default:
 			return newOCRError(CodeInvalidInput, fmt.Sprintf("unsupported task %q", req.Task))
 		}
@@ -101,6 +101,10 @@ func maxImageBytesLimit() int {
 		return 10 * 1024 * 1024
 	}
 	return max
+}
+
+func maxEncodedImageBase64Length() int {
+	return ((maxImageBytesLimit() + 2) / 3) * 4
 }
 
 // normalizeMIME 规范化 MIME（去参数、jpg→jpeg）。

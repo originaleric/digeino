@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/originaleric/digeino/config"
 )
@@ -40,21 +41,33 @@ func newProviderFromConfig() (OCRProvider, error) {
 	if cfg.Enabled == nil || !*cfg.Enabled {
 		return nil, newOCRError(CodeConfigMissing, "Tools.OCR is not enabled")
 	}
-	provider := cfg.Provider
-	if provider == "" {
-		provider = "deepseek-ocr"
+	providerName := normalizeProviderName(cfg.Provider)
+	if providerName == "" {
+		providerName = "deepseek-ocr"
 	}
-	switch provider {
-	case "deepseek-ocr", "deepseek":
-		return newDeepSeekProvider(cfg.DeepSeek, cfg)
-	default:
-		return nil, newOCRError(CodeConfigMissing, fmt.Sprintf("unsupported OCR provider %q", provider))
+
+	if providerName == "deepseek" {
+		providerName = "deepseek-ocr"
 	}
+
+	registry := configuredProviderRegistry(providerName)
+	if providerName == "deepseek-ocr" {
+		deepSeek, err := newDeepSeekProvider(cfg.DeepSeek, cfg)
+		if err != nil {
+			return nil, err
+		}
+		registry.Register(deepSeek)
+	}
+
+	if p, ok := registry.Get(providerName); ok {
+		return p, nil
+	}
+	return nil, newOCRError(CodeConfigMissing, fmt.Sprintf("unsupported OCR provider %q", cfg.Provider))
 }
 
 func deepSeekAPIKey(ds config.DeepSeekOCRConfig) string {
-	if ds.ApiKey != "" {
-		return ds.ApiKey
+	if key := resolvedSecret(ds.ApiKey); key != "" {
+		return key
 	}
 	for _, env := range []string{"DEEPSEEK_OCR_API_KEY", "DEEPSEEK_API_KEY"} {
 		if v := os.Getenv(env); v != "" {
@@ -62,4 +75,16 @@ func deepSeekAPIKey(ds config.DeepSeekOCRConfig) string {
 		}
 	}
 	return ""
+}
+
+func resolvedSecret(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	expanded := strings.TrimSpace(os.ExpandEnv(raw))
+	if expanded == "" || strings.Contains(expanded, "${") {
+		return ""
+	}
+	return expanded
 }
