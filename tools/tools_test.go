@@ -14,7 +14,10 @@ func TestBaseTools_registersImageOCRWhenEnabled(t *testing.T) {
 	cfg := config.Default()
 	enabled := true
 	cfg.Tools.OCR.Enabled = &enabled
-	cfg.Tools.OCR.DeepSeek.ApiKey = "test-key"
+	cfg.Tools.OCR.Provider = "openai-compatible-vision"
+	cfg.Tools.OCR.OpenAICompatible.ApiKey = "test-key"
+	cfg.Tools.OCR.OpenAICompatible.BaseUrl = "https://example.com/v1"
+	cfg.Tools.OCR.OpenAICompatible.Model = "qwen3-vl-plus"
 	config.Set(cfg)
 
 	baseTools, err := BaseTools(context.Background())

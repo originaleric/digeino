@@ -29,7 +29,7 @@ func NewImageOCRTool(ctx context.Context) (tool.BaseTool, error) {
 	}
 	return utils.InferTool(
 		"image_ocr",
-		"对图片进行 OCR 识别，支持 URL、Base64 或本地文件路径。可指定任务类型（plain_text、layout、table、receipt、form）及是否返回版面块与坐标。",
+		"对图片进行 OCR 识别，支持 URL、Base64 或本地文件路径。可指定任务类型（plain_text、layout、table、receipt、form）及是否返回版面块与坐标；Provider 支持 openai-compatible-vision、multipart-ocr-http 与 deepseek-ocr。",
 		ImageOCR,
 	)
 }

@@ -48,6 +48,7 @@ type OCRResponse struct {
 // OCRImage 是经 DigEino 安全策略校验和规范化后的图片载荷。
 type OCRImage struct {
 	DataURL  string // data:image/png;base64,... 或 https://...
+	Data     []byte
 	MimeType string
 	Source   string // url | base64 | file
 }

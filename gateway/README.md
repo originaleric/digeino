@@ -98,6 +98,10 @@ result, _ := c.Call(ctx, protocol.ToolCall{
 | `wechat.article.read` | 公众号文章采集 |
 | `file.read` | 本地文件读取（需 `Gateway.AllowedReadPaths`） |
 
+## 进程内 Eino 工具
+
+启用 `Tools.OCR.Enabled` 后，`tools.BaseTools()` 会注册 `image_ocr`。该工具用于图片 OCR，支持 `openai-compatible-vision`、`multipart-ocr-http` 与兼容历史配置的 `deepseek-ocr` provider；配置示例见 [OCR 工具说明](../tools/ocr/README.md) 与 [config/config.yaml](../config/config.yaml)。
+
 ## 安全
 
 - 域名白名单：`Tools.LocalBrowser.AllowedDomains` + `ToolCall.policy.allowed_domains`

@@ -38,7 +38,7 @@ func resolveImage(ctx context.Context, req *OCRRequest) (*OCRImage, error) {
 			return nil, err
 		}
 		dataURL = fmt.Sprintf("data:%s;base64,%s", mime, base64.StdEncoding.EncodeToString(raw))
-		return &OCRImage{DataURL: dataURL, MimeType: mime, Source: "base64"}, nil
+		return &OCRImage{DataURL: dataURL, Data: raw, MimeType: mime, Source: "base64"}, nil
 
 	case strings.TrimSpace(req.FilePath) != "":
 		if err := validateFilePath(req.FilePath); err != nil {
@@ -58,7 +58,7 @@ func resolveImage(ctx context.Context, req *OCRRequest) (*OCRImage, error) {
 		}
 		b64 := base64.StdEncoding.EncodeToString(data)
 		dataURL := fmt.Sprintf("data:%s;base64,%s", mime, b64)
-		return &OCRImage{DataURL: dataURL, MimeType: mime, Source: "file"}, nil
+		return &OCRImage{DataURL: dataURL, Data: data, MimeType: mime, Source: "file"}, nil
 	}
 	return nil, newOCRError(CodeInvalidInput, errNoImageSource.Error())
 }
@@ -161,5 +161,5 @@ func fetchImageFromURL(ctx context.Context, imageURL string, downloadTimeout tim
 	}
 	b64 := base64.StdEncoding.EncodeToString(data)
 	dataURL := fmt.Sprintf("data:%s;base64,%s", mime, b64)
-	return &OCRImage{DataURL: dataURL, MimeType: mime, Source: "url"}, nil
+	return &OCRImage{DataURL: dataURL, Data: data, MimeType: mime, Source: "url"}, nil
 }

@@ -49,6 +49,8 @@ func newProviderFromConfig() (OCRProvider, error) {
 	if providerName == "deepseek" {
 		providerName = "deepseek-ocr"
 	}
+	providerName = canonicalOpenAICompatibleVisionProviderName(providerName)
+	providerName = canonicalMultipartOCRProviderName(providerName)
 
 	registry := configuredProviderRegistry(providerName)
 	if providerName == "deepseek-ocr" {
@@ -57,6 +59,20 @@ func newProviderFromConfig() (OCRProvider, error) {
 			return nil, err
 		}
 		registry.Register(deepSeek)
+	}
+	if providerName == defaultOpenAICompatibleVisionProvider {
+		compatibleVision, err := newOpenAICompatibleVisionProvider(cfg.OpenAICompatible, cfg)
+		if err != nil {
+			return nil, err
+		}
+		registry.Register(compatibleVision)
+	}
+	if providerName == defaultMultipartOCRProvider {
+		multipartOCR, err := newMultipartOCRProvider(cfg.MultipartOCR, cfg)
+		if err != nil {
+			return nil, err
+		}
+		registry.Register(multipartOCR)
 	}
 
 	if p, ok := registry.Get(providerName); ok {

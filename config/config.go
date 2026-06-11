@@ -274,18 +274,20 @@ type ToolsConfig struct {
 
 // OCRConfig 图片 OCR 大模型配置。
 type OCRConfig struct {
-	Enabled               *bool             `yaml:"Enabled" json:"Enabled,omitempty"`
-	Provider              string            `yaml:"Provider" json:"Provider"` // deepseek-ocr
-	DeepSeek              DeepSeekOCRConfig `yaml:"DeepSeek" json:"DeepSeek"`
-	MaxImageBytes         int               `yaml:"MaxImageBytes" json:"MaxImageBytes"`
-	AllowedMimeTypes      []string          `yaml:"AllowedMimeTypes" json:"AllowedMimeTypes"`
-	AllowedFilePaths      []string          `yaml:"AllowedFilePaths" json:"AllowedFilePaths"`
-	AllowedImageDomains   []string          `yaml:"AllowedImageDomains" json:"AllowedImageDomains"`
-	BlockPrivateNetworks  *bool             `yaml:"BlockPrivateNetworks" json:"BlockPrivateNetworks,omitempty"`
-	URLDownloadTimeoutSec int               `yaml:"URLDownloadTimeoutSec" json:"URLDownloadTimeoutSec"`
-	TimeoutSec            int               `yaml:"TimeoutSec" json:"TimeoutSec"`
-	RetryCount            int               `yaml:"RetryCount" json:"RetryCount"`
-	RetryDelayMs          int               `yaml:"RetryDelayMs" json:"RetryDelayMs"`
+	Enabled               *bool                           `yaml:"Enabled" json:"Enabled,omitempty"`
+	Provider              string                          `yaml:"Provider" json:"Provider"` // openai-compatible-vision | multipart-ocr-http | deepseek-ocr
+	DeepSeek              DeepSeekOCRConfig               `yaml:"DeepSeek" json:"DeepSeek"`
+	OpenAICompatible      OpenAICompatibleVisionOCRConfig `yaml:"OpenAICompatible" json:"OpenAICompatible"`
+	MultipartOCR          MultipartOCRConfig              `yaml:"MultipartOCR" json:"MultipartOCR"`
+	MaxImageBytes         int                             `yaml:"MaxImageBytes" json:"MaxImageBytes"`
+	AllowedMimeTypes      []string                        `yaml:"AllowedMimeTypes" json:"AllowedMimeTypes"`
+	AllowedFilePaths      []string                        `yaml:"AllowedFilePaths" json:"AllowedFilePaths"`
+	AllowedImageDomains   []string                        `yaml:"AllowedImageDomains" json:"AllowedImageDomains"`
+	BlockPrivateNetworks  *bool                           `yaml:"BlockPrivateNetworks" json:"BlockPrivateNetworks,omitempty"`
+	URLDownloadTimeoutSec int                             `yaml:"URLDownloadTimeoutSec" json:"URLDownloadTimeoutSec"`
+	TimeoutSec            int                             `yaml:"TimeoutSec" json:"TimeoutSec"`
+	RetryCount            int                             `yaml:"RetryCount" json:"RetryCount"`
+	RetryDelayMs          int                             `yaml:"RetryDelayMs" json:"RetryDelayMs"`
 }
 
 // DeepSeekOCRConfig DeepSeek-OCR 适配器配置。
@@ -295,6 +297,25 @@ type DeepSeekOCRConfig struct {
 	Model       string `yaml:"Model" json:"Model"`
 	Mode        string `yaml:"Mode" json:"Mode"`               // chat | ocr_endpoint
 	OCREndpoint string `yaml:"OCREndpoint" json:"OCREndpoint"` // 默认 /v1/ocr，用于自托管
+}
+
+// OpenAICompatibleVisionOCRConfig OpenAI 兼容视觉模型 OCR 配置。
+type OpenAICompatibleVisionOCRConfig struct {
+	ApiKey  string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl string `yaml:"BaseUrl" json:"BaseUrl"`
+	Model   string `yaml:"Model" json:"Model"`
+}
+
+// MultipartOCRConfig 通用 multipart/form-data OCR HTTP 服务配置。
+type MultipartOCRConfig struct {
+	ApiKey           string `yaml:"ApiKey" json:"ApiKey"`
+	BaseUrl          string `yaml:"BaseUrl" json:"BaseUrl"`
+	OCREndpoint      string `yaml:"OCREndpoint" json:"OCREndpoint"`
+	Model            string `yaml:"Model" json:"Model"`
+	ResponseTextPath string `yaml:"ResponseTextPath" json:"ResponseTextPath"`
+	FileField        string `yaml:"FileField" json:"FileField"`
+	PromptField      string `yaml:"PromptField" json:"PromptField"`
+	LanguageField    string `yaml:"LanguageField" json:"LanguageField"`
 }
 
 // LocalBrowserConfig 本地浏览器抓取配置
@@ -595,7 +616,7 @@ func Default() *Config {
 			},
 			OCR: OCRConfig{
 				Enabled:               &disabled,
-				Provider:              "deepseek-ocr",
+				Provider:              "openai-compatible-vision",
 				MaxImageBytes:         10 * 1024 * 1024,
 				BlockPrivateNetworks:  &enabled,
 				URLDownloadTimeoutSec: 30,
@@ -606,6 +627,17 @@ func Default() *Config {
 					BaseUrl: "https://api.deepseek.com",
 					Model:   "deepseek-ocr",
 					Mode:    "chat",
+				},
+				OpenAICompatible: OpenAICompatibleVisionOCRConfig{
+					BaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+					Model:   "qwen3-vl-plus",
+				},
+				MultipartOCR: MultipartOCRConfig{
+					OCREndpoint:      "/v1/ocr",
+					ResponseTextPath: "text",
+					FileField:        "file",
+					PromptField:      "prompt",
+					LanguageField:    "language",
 				},
 			},
 		},
